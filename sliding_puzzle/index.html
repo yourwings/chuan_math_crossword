@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川数字华容道</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川数字华容道</h1>
+        <div class="score-container">
+            <span>步数: </span>
+            <span id="moves">0</span>
+            <div id="timer" class="timer">时间: 00:00</div>
+            <div id="game-status" class="game-status"></div>
+        </div>
+        <div id="puzzle-board" class="puzzle-board"></div>
+        <div class="controls">
+            <div class="settings">
+                <div class="setting-item">
+                    <label for="board-size">棋盘大小：</label>
+                    <select id="board-size">
+                        <option value="3">3x3 (简单)</option>
+                        <option value="4" selected>4x4 (标准)</option>
+                        <option value="5">5x5 (困难)</option>
+                    </select>
+                </div>
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="hint-btn" class="hidden">提示</button>
+            <button id="back-btn">返回</button>
+        </div>
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>点击与空白格子相邻的数字，将其移动到空白位置</li>
+                    <li>通过移动数字，将它们按顺序排列</li>
+                    <li>最终目标是将数字按从小到大顺序排列，空白格在右下角</li>
+                    <li>使用最少的步数完成挑战</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

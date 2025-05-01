@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川算术格</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川算术格</h1>
+        <div class="score-container">
+            <span>分数: </span>
+            <span id="score">0</span>
+        </div>
+        <canvas id="game-canvas" width="300" height="300"></canvas>
+        <div class="controls">
+            <div class="settings">
+                <label for="game-speed">难度：</label>
+                <select id="game-speed">
+                    <option value="easy">简单</option>
+                    <option value="medium" selected>中等</option>
+                    <option value="hard">困难</option>
+                </select>
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="back-btn">返回</button>
+        </div>
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>点击空白格子，输入数字或运算符</li>
+                    <li>输入多位数时，先输入数字，再点击"确认"按钮</li>
+                    <li>蓝色背景的数字是共享数字，可用于多个算式</li>
+                    <li>使所有算式结果正确</li>
+                    <li>完成所有空格获得胜利</li>
+                </ul>
+            </div>
+        </div>
+        <div id="number-pad" class="number-pad">
+            <div class="number-pad-title">选择数字或运算符</div>
+            <div class="number-buttons">
+                <button class="number-btn" data-number="0">0</button>
+                <button class="number-btn" data-number="1">1</button>
+                <button class="number-btn" data-number="2">2</button>
+                <button class="number-btn" data-number="3">3</button>
+                <button class="number-btn" data-number="4">4</button>
+                <button class="number-btn" data-number="5">5</button>
+                <button class="number-btn" data-number="6">6</button>
+                <button class="number-btn" data-number="7">7</button>
+                <button class="number-btn" data-number="8">8</button>
+                <button class="number-btn" data-number="9">9</button>
+                <button class="number-btn" data-number="+">+</button>
+                <button class="number-btn" data-number="-">-</button>
+                <button class="number-btn" data-number="*">×</button>
+                <button class="number-btn" data-number="/">÷</button>
+                <button class="number-btn action-btn" data-number="clear">清除</button>
+                <button class="number-btn action-btn" data-number="enter">确认</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+    <script src="initialize-game.js"></script>
+    <script src="debug-info.js"></script>
+</body>
+</html>

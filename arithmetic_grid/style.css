@@ -1,0 +1,409 @@
+/* 游戏样式 */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.game-container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 95vh;
+}
+
+h1 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+.score-container {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+#game-canvas {
+    background-color: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    max-width: 100%;
+    height: auto;
+}
+
+.game-instructions {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.game-instructions p {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.game-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #666;
+}
+
+.game-instructions li {
+    margin: 5px 0;
+}
+
+.toggle-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: #0b7dda;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.settings {
+    margin-bottom: 12px;
+}
+
+.settings label {
+    font-weight: bold;
+    color: #333;
+}
+
+.number-pad {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    max-width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: fixed;
+    z-index: 1000;
+    width: 90%;
+    max-width: 350px;
+}
+
+.number-pad-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    color: #333333; /* 修改标题颜色，使其更加明显 */
+    font-size: 18px; /* 增大字体大小 */
+}
+
+.number-buttons {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+/* 清除和确认按钮样式 */
+.action-btn {
+    background-color: #FF9800;
+    grid-column: span 3;
+    font-weight: bold;
+}
+
+.action-btn:hover {
+    background-color: #F57C00;
+}
+
+.action-btn:active {
+    background-color: #EF6C00;
+}
+
+.number-btn {
+    padding: 10px;
+    font-size: 18px; /* 增大数字按钮字体 */
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.number-btn:hover {
+    background-color: #3e8e41;
+}
+
+/* 运算符按钮样式 */
+.number-btn[data-number="+"],
+.number-btn[data-number="-"],
+.number-btn[data-number="*"],
+.number-btn[data-number="/"] {
+    background-color: #2196F3;
+    color: white;
+    font-weight: bold;
+    font-size: 20px; /* 增大运算符字体 */
+}
+
+.number-btn[data-number="+"]:hover,
+.number-btn[data-number="-"]:hover,
+.number-btn[data-number="*"]:hover,
+.number-btn[data-number="/"]:hover {
+    background-color: #0b7dda;
+}
+
+/* 适应更大的游戏画布 */
+.game-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border-radius: 6px;
+    color: white;
+    font-size: 18px;
+    padding: 10px 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.number-btn:hover {
+    background-color: #388E3C;
+}
+
+.number-btn:active {
+    background-color: #2E7D32;
+}
+
+button {
+    background-color: #2196F3;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 12px 20px;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+button:hover {
+    background-color: #1976D2;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+    margin-left: 8px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+select:hover {
+    border-color: #2196F3;
+}
+
+select:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+/* 移动端响应式设计 */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 5px;
+    }
+    
+    .game-container {
+        padding: 10px;
+        max-height: 90vh;
+    }
+    
+    h1 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+    
+    #game-canvas {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .game-instructions {
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 0.9em;
+    }
+    
+    .controls {
+        margin-top: 10px;
+        margin-bottom: 60px; /* 为固定在底部的数字键盘留出空间 */
+    }
+    
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+    
+    .number-buttons {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .number-btn {
+        padding: 8px;
+        font-size: 16px; /* 增大移动端数字按钮字体 */
+    }
+    
+    .number-pad-title {
+        color: #333333; /* 确保移动端也有明显的标题颜色 */
+        font-size: 16px;
+    }
+    
+    /* 确保移动端结算画面文字颜色正常显示 */
+    canvas {
+        background-color: #ffffff;
+    }
+}
+
+/* 针对iPad设备的特殊适配 */
+@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+    #game-canvas {
+        max-width: 100%;
+        height: auto;
+        background-color: #ffffff !important; /* 强制设置背景色 */
+    }
+    
+    /* 确保iPad上结算画面文字颜色正常显示 */
+    canvas {
+        background-color: #ffffff !important;
+    }
+    
+    /* 调整iPad上的游戏容器 */
+    .game-container {
+        padding: 15px;
+        max-width: 90%;
+    }
+}
+
+/* 针对更小屏幕的设备 */
+@media screen and (max-width: 480px) {
+    #game-canvas {
+        transform: scale(0.9);
+        transform-origin: top center;
+    }
+    
+    .number-buttons {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+    }
+    
+    .number-btn {
+        padding: 6px;
+        font-size: 12px;
+    }
+    
+    .action-btn {
+        grid-column: span 2;
+    }
+}
+
+/* 游戏状态显示区域 */
+.game-status {
+    width: 100%;
+    margin-top: 8px;
+    padding: 5px 8px;
+    background-color: #f8f8f8;
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: none;
+}
+
+/* 结算画面样式 */
+.settlement-screen {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.settlement-screen h2 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.settlement-details {
+    margin-bottom: 20px;
+}
+
+.settlement-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.settlement-item:last-child {
+    border-bottom: none;
+}
+
+.total-score {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #4CAF50;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #eee;
+}

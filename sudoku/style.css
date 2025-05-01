@@ -1,0 +1,862 @@
+/* 游戏样式 */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.game-container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    max-height: 95vh;
+}
+
+h1 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+.score-container {
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    font-weight: bold;
+    color: #4CAF50;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    position: relative;
+}
+
+.timer {
+    color: #FF5722;
+    font-size: 0.9em;
+}
+
+/* 游戏状态显示区域 */
+.game-status {
+    width: 100%;
+    margin-top: 8px;
+    padding: 5px 8px;
+    background-color: #f8f8f8;
+}
+    
+/* 结算画面样式 */
+.settlement-screen {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.settlement-screen h2 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.settlement-details {
+    margin-bottom: 20px;
+}
+
+.settlement-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.settlement-item:last-child {
+    border-bottom: none;
+}
+
+.total-score {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #4CAF50;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #eee;
+}
+
+#close-settlement {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s;
+}
+
+#close-settlement:hover {
+    background-color: #0b7dda;
+    border-radius: 5px;
+    font-size: 0.9em;
+    text-align: center;
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.game-status.success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border-left: 4px solid #4CAF50;
+}
+
+.game-status.error {
+    background-color: #ffebee;
+    color: #c62828;
+    border-left: 4px solid #f44336;
+}
+
+.game-status.info {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    border-left: 4px solid #2196F3;
+}
+
+.game-status-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.game-status-buttons button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.game-status-buttons button:hover {
+    background-color: #388E3C;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 数独棋盘样式 */
+.sudoku-board {
+    display: grid;
+    grid-template-columns: repeat(var(--board-size, 9), 1fr);
+    grid-template-rows: repeat(var(--board-size, 9), 1fr);
+    gap: 1px;
+    margin: 0 auto 20px;
+    max-width: 450px;
+    background-color: #000;
+    padding: 3px;
+    border: 2px solid #000;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+/* 4x4数独棋盘样式 */
+.board-size-4 {
+    max-width: 300px;
+    font-size: 1.2em;
+}
+
+/* 6x6数独棋盘样式 */
+.board-size-6 {
+    max-width: 380px;
+    font-size: 1.1em;
+}
+
+.sudoku-cell {
+    background-color: #fff;
+    aspect-ratio: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+/* 基础边框样式 - 所有单元格都有1px细边框 */
+.sudoku-cell {
+    border: 1px solid #ccc;
+}
+
+/* 宫格边框 - 根据棋盘大小设置 */
+
+/* 9x9数独的3x3宫格边框 */
+/* 右侧粗边框 - 每个3x3宫格的右边界 */
+.board-size-9 .sudoku-cell:nth-child(3n) {
+    border-right: 2px solid #000;
+}
+
+/* 右侧最外边框 */
+.board-size-9 .sudoku-cell:nth-child(9n) {
+    border-right: 2px solid #000;
+}
+
+/* 底部粗边框 - 每个3x3宫格的底边界 */
+.board-size-9 .sudoku-cell:nth-child(n+19):nth-child(-n+27),
+.board-size-9 .sudoku-cell:nth-child(n+46):nth-child(-n+54) {
+    border-bottom: 2px solid #000;
+}
+
+/* 底部最外边框 */
+.board-size-9 .sudoku-cell:nth-child(n+73):nth-child(-n+81) {
+    border-bottom: 2px solid #000;
+}
+
+/* 左侧最外边框 */
+.board-size-9 .sudoku-cell:nth-child(9n+1) {
+    border-left: 2px solid #000;
+}
+
+/* 顶部最外边框 */
+.board-size-9 .sudoku-cell:nth-child(-n+9) {
+    border-top: 2px solid #000;
+}
+
+/* 4x4数独的2x2宫格边框 */
+/* 右侧粗边框 - 每个2x2宫格的右边界 */
+.board-size-4 .sudoku-cell:nth-child(2n) {
+    border-right: 2px solid #000;
+}
+
+/* 右侧最外边框 */
+.board-size-4 .sudoku-cell:nth-child(4n) {
+    border-right: 2px solid #000;
+}
+
+/* 底部粗边框 - 每个2x2宫格的底边界 */
+.board-size-4 .sudoku-cell:nth-child(n+5):nth-child(-n+8) {
+    border-bottom: 2px solid #000;
+}
+
+/* 底部最外边框 */
+.board-size-4 .sudoku-cell:nth-child(n+13):nth-child(-n+16) {
+    border-bottom: 2px solid #000;
+}
+
+/* 左侧最外边框 */
+.board-size-4 .sudoku-cell:nth-child(4n+1) {
+    border-left: 2px solid #000;
+}
+
+/* 顶部最外边框 */
+.board-size-4 .sudoku-cell:nth-child(-n+4) {
+    border-top: 2px solid #000;
+}
+
+/* 6x6数独的2x3宫格边框 */
+/* 右侧粗边框 - 每个2x3宫格的右边界（每2列一个宫格） */
+.board-size-6 .sudoku-cell:nth-child(2n) {
+    border-right: 2px solid #000;
+}
+
+/* 右侧粗边框 - 每个2x3宫格的右边界（每4列一个宫格） */
+.board-size-6 .sudoku-cell:nth-child(4n) {
+    border-right: 2px solid #000;
+}
+
+/* 右侧最外边框 */
+.board-size-6 .sudoku-cell:nth-child(6n) {
+    border-right: 2px solid #000;
+}
+
+/* 底部粗边框 - 每个2x3宫格的底边界（每3行一个宫格） */
+.board-size-6 .sudoku-cell:nth-child(n+13):nth-child(-n+18) {
+    border-bottom: 2px solid #000;
+}
+
+/* 底部最外边框 */
+.board-size-6 .sudoku-cell:nth-child(n+31):nth-child(-n+36) {
+    border-bottom: 2px solid #000;
+}
+
+/* 左侧最外边框 */
+.board-size-6 .sudoku-cell:nth-child(6n+1) {
+    border-left: 2px solid #000;
+}
+
+/* 顶部最外边框 */
+.board-size-6 .sudoku-cell:nth-child(-n+6) {
+    border-top: 2px solid #000;
+}
+
+/* 选中和错误状态 */
+.sudoku-cell.selected {
+    background-color: #e3f2fd;
+}
+
+.sudoku-cell.fixed {
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+/* 确保高亮样式优先级高于固定单元格样式 */
+.sudoku-cell.highlight-same {
+    background-color: #fff9c4 !important;
+}
+
+.sudoku-cell.error {
+    color: #f44336;
+}
+
+.sudoku-cell.conflict {
+    color: #f44336;
+    background-color: #ffebee;
+    box-shadow: inset 0 0 8px rgba(244, 67, 54, 0.8);
+    border: 2px solid #f44336 !important;
+    animation: conflictPulse 1.5s infinite;
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes conflictPulse {
+    0% { transform: scale(1); box-shadow: inset 0 0 8px rgba(244, 67, 54, 0.8); }
+    50% { transform: scale(1.05); box-shadow: inset 0 0 12px rgba(244, 67, 54, 1); }
+    100% { transform: scale(1); box-shadow: inset 0 0 8px rgba(244, 67, 54, 0.8); }
+}
+
+.sudoku-cell.correct {
+    color: #4CAF50;
+}
+
+.sudoku-cell.filled-solution {
+    color: #2196F3;
+    font-weight: bold;
+    background-color: #e8f5e9;
+}
+
+.sudoku-cell.notes-active {
+    background-color: #f0f8ff;
+    box-shadow: inset 0 0 5px rgba(33, 150, 243, 0.2);
+}
+
+@keyframes noteAdded {
+    0% { transform: scale(0.5); opacity: 0.5; }
+    50% { transform: scale(1.5); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.note-number.note-added {
+    animation: noteAdded 0.3s ease-in-out;
+}
+
+/* 笔记模式 */
+.sudoku-cell .notes {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    font-size: 0.4em;
+    color: #666;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 根据棋盘大小调整笔记网格 */
+.board-size-4 .sudoku-cell .notes {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.5em;
+}
+
+.board-size-6 .sudoku-cell .notes {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.45em;
+}
+
+.board-size-9 .sudoku-cell .notes {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    font-size: 0.4em;
+}
+
+.note-number {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    color: #2196F3;
+    padding: 1px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.note-number:not(:empty) {
+    background-color: #e3f2fd;
+    box-shadow: 0 0 2px rgba(33, 150, 243, 0.3);
+}
+
+.game-instructions {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 20px 0;
+    text-align: left;
+    border-left: 4px solid #2196F3;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.game-instructions .button-info {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px dashed #ccc;
+}
+
+.game-instructions .button-info p {
+    margin-bottom: 8px;
+    color: #555;
+}
+
+.game-instructions .button-info strong {
+    color: #2196F3;
+    font-weight: bold;
+}
+
+.game-instructions .button-info .check-btn-info {
+    color: #4CAF50;
+}
+
+.game-instructions .button-info .solve-btn-info {
+    color: #FF5722;
+}
+
+.game-instructions p {
+    margin: 0 0 10px 0;
+    font-weight: bold;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.game-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #666;
+}
+
+.game-instructions li {
+    margin: 5px 0;
+}
+
+.toggle-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toggle-btn:hover {
+    background-color: #0b7dda;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.controls button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+.controls button:hover {
+    background-color: #45a049;
+}
+
+#restart-btn {
+    background-color: #FF9800;
+}
+
+#restart-btn:hover {
+    background-color: #e68a00;
+}
+
+#back-btn {
+    background-color: #f44336;
+}
+
+#back-btn:hover {
+    background-color: #d32f2f;
+}
+
+#check-btn {
+    background-color: #2196F3;
+}
+
+#check-btn:hover {
+    background-color: #0b7dda;
+}
+
+#solve-btn {
+    background-color: #9C27B0;
+}
+
+#solve-btn:hover {
+    background-color: #7B1FA2;
+}
+
+.settings {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* 高亮开关样式 */
+.highlight-toggle {
+    display: flex;
+    align-items: center;
+    margin-left: 15px;
+    font-size: 0.9em;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-right: 5px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 20px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+.settings select {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    background-color: #f8f9fa;
+}
+
+/* 数字键盘 */
+.number-pad {
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    transition: all 0.2s ease-in-out;
+}
+
+.number-pad-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+    position: relative;
+}
+
+.number-pad-title .mode-indicator {
+    position: absolute;
+    right: 5px;
+    top: 0;
+    font-size: 0.8em;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+.number-pad-title .mode-indicator.notes-active {
+    background-color: #FFC107;
+    color: #000;
+    font-weight: bold;
+}
+
+.number-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.number-btn {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.number-btn:hover {
+    background-color: #e3f2fd;
+}
+
+.number-btn[data-number="notes"] {
+    background-color: #9C27B0;
+}
+
+.number-btn[data-number="notes"].active {
+    background-color: #FFC107;
+    color: #000;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+}
+
+.action-btn {
+    background-color: #f5f5f5;
+    grid-column: span 3;
+}
+
+/* 答案通知样式 */
+.answer-notice {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px auto;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+    max-width: 90%;
+    text-align: center;
+}
+
+.notice-content h3 {
+    color: #2196F3;
+    margin-top: 0;
+}
+
+.notice-content p {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.notice-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.notice-buttons button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.notice-buttons button:hover {
+    background-color: #45a049;
+}
+
+#back-to-menu-notice-btn {
+    background-color: #f44336;
+}
+
+#back-to-menu-notice-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .game-container {
+        padding: 10px;
+        max-height: 100vh;
+    }
+    
+    h1 {
+        font-size: 1.5em;
+        margin-bottom: 10px;
+    }
+    
+    .sudoku-board {
+        max-width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .sudoku-cell {
+        font-size: 1em;
+    }
+    
+    .number-btn {
+        padding: 8px;
+        font-size: 14px;
+    }
+    
+    .controls button {
+        padding: 8px;
+        font-size: 12px;
+        margin: 3px;
+    }
+    
+    .controls {
+        flex-wrap: wrap;
+    }
+    
+    .settings {
+        margin-bottom: 5px;
+    }
+}
+
+/* 特别针对iPhone 13 Pro Max等大屏手机的优化 */
+@media (min-width: 390px) and (max-width: 428px) and (min-height: 800px) {
+    .sudoku-board {
+        max-width: 95%;
+        aspect-ratio: 1;
+    }
+    
+    .sudoku-cell {
+        font-size: 0.9em;
+    }
+    
+    body {
+        padding: 5px;
+    }
+    
+    .game-container {
+        max-height: 98vh;
+        padding: 8px;
+    }
+}
+
+/* 胜利动画 */
+@keyframes victory {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.victory-animation {
+    animation: victory 1s ease-in-out;
+}
+
+/* 游戏结束弹窗 */
+.game-over-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex !important; /* 强制显示 */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 80%;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+    color: #4CAF50;
+    margin-top: 0;
+}
+
+.modal-content p {
+    font-size: 1.2em;
+    margin: 20px 0;
+}
+
+.modal-content button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin: 10px;
+}
+
+.modal-content button:hover {
+    background-color: #45a049;
+}

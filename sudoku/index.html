@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川数独</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川数独</h1>
+        <div class="score-container">
+            <span>分数: </span>
+            <span id="score">0</span>
+            <div id="timer" class="timer">时间: 10:00</div>
+            <div id="game-status" class="game-status"></div>
+        </div>
+        <div id="sudoku-board" class="sudoku-board"></div>
+        <div class="controls">
+            <div class="settings">
+                <div class="setting-item">
+                    <label for="board-size">棋盘大小：</label>
+                    <select id="board-size">
+                        <option value="4">4x4 (适合幼儿)</option>
+                        <option value="6">6x6 (适合低龄儿童)</option>
+                        <option value="9" selected>9x9 (标准)</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="difficulty">难度：</label>
+                    <select id="difficulty">
+                        <option value="easy">简单</option>
+                        <option value="medium" selected>中等</option>
+                        <option value="hard">困难</option>
+                    </select>
+                </div>
+                <div class="setting-item highlight-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="highlight-toggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span>数字高亮</span>
+                </div>
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="solve-btn">显示答案</button>
+            <button id="back-btn">返回</button>
+        </div>
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>在每个空格中填入1-9的数字</li>
+                    <li>每行、每列和每个3x3宫格中的数字不能重复</li>
+                    <li>根据已有数字推理出正确答案</li>
+                    <li>完成所有空格获得胜利</li>
+                </ul>
+                <div class="button-info">
+                    <p class="solve-btn-info"><strong>显示答案</strong>：直接显示完整的正确答案，会结束当前游戏且不会获得分数。</p>
+                </div>
+            </div>
+        </div>
+        <div id="number-pad" class="number-pad">
+            <div class="number-pad-title">选择数字</div>
+            <div class="number-buttons">
+                <button class="number-btn" data-number="1">1</button>
+                <button class="number-btn" data-number="2">2</button>
+                <button class="number-btn" data-number="3">3</button>
+                <button class="number-btn" data-number="4">4</button>
+                <button class="number-btn" data-number="5">5</button>
+                <button class="number-btn" data-number="6">6</button>
+                <button class="number-btn" data-number="7">7</button>
+                <button class="number-btn" data-number="8">8</button>
+                <button class="number-btn" data-number="9">9</button>
+                <button class="number-btn action-btn" data-number="clear">清除</button>
+                <button class="number-btn action-btn" data-number="notes">笔记</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+    <script src="sudoku-generator.js"></script>
+    <script src="initialize-game.js"></script>
+</body>
+</html>

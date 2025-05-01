@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川数字迷宫 - 游戏集合</title>
+    <!-- 添加离线应用支持 -->
+    <meta name="description" content="小川数字迷宫游戏集合 - 包含算术格和数独游戏">
+    <meta name="theme-color" content="#2196F3">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6IzIxOTZmMzt9LmNscy0ye2ZpbGw6I2ZmZjt9PC9zdHlsZT48L2RlZnM+PGNpcmNsZSBjbGFzcz0iY2xzLTEiIGN4PSI2NCIgY3k9IjY0IiByPSI2NCIvPjxwYXRoIGNsYXNzPSJjbHMtMiIgZD0iTTQwLDQwSDg4Vjg4SDQwWk01Miw1Mkg3NlY3Nkg1MloiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik01OCw1OEg3MFY3MEg1OFoiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0zMCw4MEg0MFY5MEgzMFoiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik04OCw4MEg5OFY5MEg4OFoiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik04OCwzMEg5OFY0MEg4OFoiLz48cGF0aCBjbGFzcz0iY2xzLTIiIGQ9Ik0zMCwzMEg0MFY0MEgzMFoiLz48L3N2Zz4=">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .games-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #2196F3;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+        
+        .games-description {
+            margin-bottom: 30px;
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .game-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .game-card h3 {
+            color: #2196F3;
+            margin-top: 0;
+        }
+        
+        .game-card p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .game-card .play-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .game-card .play-button:hover {
+            background-color: #45a049;
+        }
+        
+        .coming-soon {
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .coming-soon::after {
+            content: "即将推出";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="games-container">
+        <h1>小川数字迷宫</h1>
+        <div class="games-description">
+            <p>欢迎来到小川数字迷宫！这是一个数字类游戏集合项目，旨在通过有趣的数学游戏提高玩家的数学思维能力。</p>
+            <p>选择下面的游戏开始您的数学冒险吧！</p>
+        </div>
+        
+        <div class="games-grid">
+            <div class="game-card" onclick="window.location.href='arithmetic_grid/index.html'">
+                <h3>小川算术格</h3>
+                <p>一款数学填字游戏，通过有趣的数学表达式填充来提高数学思维能力。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" data-game="sudoku" onclick="window.location.href='sudoku/index.html'">
+                <h3>小川数独</h3>
+                <p>经典九宫格数独游戏，锻炼逻辑思维能力。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" onclick="window.location.href='sliding_puzzle/index.html'">
+                <h3>数字华容道</h3>
+                <p>结合数学元素的华容道游戏，通过移动数字块完成拼图。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" onclick="window.location.href='mental_arithmetic/index.html'">
+                <h3>口算练习</h3>
+                <p>快速口算练习游戏，提高心算能力和数学运算速度。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加Service Worker注册脚本 -->
+    <script>
+        // 注册Service Worker以支持离线访问
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker 注册成功'))
+                    .catch(err => console.log('Service Worker 注册失败', err));
+            });
+        }
+    </script>
+</body>
+</html>
