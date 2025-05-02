@@ -18,6 +18,9 @@ cp -r distribution_guide.md "$TEMP_DIR"/
 cp -r arithmetic_grid "$TEMP_DIR"/
 cp -r sudoku "$TEMP_DIR"/
 cp -r mental_arithmetic "$TEMP_DIR"/
+cp -r sliding_puzzle "$TEMP_DIR"/
+cp -r guess_number "$TEMP_DIR"/
+cp -r game_24points "$TEMP_DIR"/
 
 # 创建ZIP文件
 zip -r "小川数字迷宫.zip" "$TEMP_DIR"

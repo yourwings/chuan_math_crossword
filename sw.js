@@ -18,7 +18,10 @@ const CACHE_ASSETS = [
   './sudoku/sudoku-generator.js',
   './mental_arithmetic/index.html',
   './mental_arithmetic/game.js',
-  './mental_arithmetic/style.css'
+  './mental_arithmetic/style.css',
+  './game_24points/index.html',
+  './game_24points/game.js',
+  './game_24points/style.css'
 ];
 
 // 安装 Service Worker

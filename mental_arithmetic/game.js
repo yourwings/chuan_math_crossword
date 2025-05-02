@@ -459,5 +459,36 @@ function toggleRules() {
     }
 }
 
+// 初始化数字键盘功能
+function initializeNumberKeyboard() {
+    const keyboardKeys = document.querySelectorAll('.keyboard-key');
+    
+    keyboardKeys.forEach(key => {
+        key.addEventListener('click', function() {
+            // 如果游戏未开始或已结束，不响应点击
+            if (!gameStarted || gameOver || answerInput.disabled) {
+                return;
+            }
+            
+            const keyValue = this.textContent;
+            
+            // 根据按键内容执行不同操作
+            if (keyValue === '删除') {
+                // 删除最后一个字符
+                answerInput.value = answerInput.value.slice(0, -1);
+            } else {
+                // 添加数字或负号到输入框
+                answerInput.value += keyValue;
+            }
+            
+            // 聚焦输入框
+            answerInput.focus();
+        });
+    });
+}
+
 // 页面加载完成后初始化游戏
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+    initializeNumberKeyboard();
+});

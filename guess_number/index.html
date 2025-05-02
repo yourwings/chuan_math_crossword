@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川猜数字</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川猜数字</h1>
+        <div class="score-container">
+            <span>分数: </span>
+            <span id="score">0</span>
+            <div id="timer" class="timer">时间: 00:00</div>
+            <div id="moves" class="moves">翻牌次数: 0</div>
+            <div id="game-status" class="game-status"></div>
+        </div>
+        <div id="game-board" class="game-board"></div>
+        <div class="controls">
+            <div class="settings">
+                <div class="setting-item">
+                    <label for="game-mode">游戏模式：</label>
+                    <select id="game-mode">
+                        <option value="single" selected>单人模式</option>
+                        <option value="double">双人模式</option>
+                    </select>
+                </div>
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="back-btn">返回</button>
+        </div>
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>5x5格子中隐藏着1到25的数字</li>
+                    <li>从1开始，按顺序找出所有数字</li>
+                    <li>点击格子显示数字，如果是当前要找的数字，格子会保持显示</li>
+                    <li>如果不是当前要找的数字，格子会重新隐藏</li>
+                    <li>单人模式：记录完成时间和翻牌次数</li>
+                    <li>双人模式：两人轮流翻牌，找到的格子归属于该玩家，找到格子多的玩家获胜</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div id="number-display" class="number-display">
+        <div class="current-number">当前寻找: <span id="current-number">1</span></div>
+        <div id="player-turn" class="player-turn"></div>
+    </div>
+
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>游戏结束</h2>
+            <div id="game-result"></div>
+            <button id="play-again-btn">再玩一次</button>
+            <button id="return-home-btn">返回主页</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
