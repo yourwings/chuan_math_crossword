@@ -110,12 +110,6 @@ function handleCellClick(event) {
     moves++;
     movesElement.textContent = `翻牌次数: ${moves}`;
     
-    // 单人模式下，每次点击减1分（最低为0分）
-    if (gameMode === 'single') {
-        score = Math.max(0, score - 1);
-        scoreElement.textContent = score.toString();
-    }
-    
     // 显示数字
     event.target.textContent = value;
     
@@ -139,16 +133,13 @@ function handleCellClick(event) {
                 player2Numbers.push(value);
             }
             
-            // 无论猜对与否，都切换到另一个玩家
+            // 双人模式下，每次猜测后立即切换玩家，无论是否猜对
             currentPlayer = currentPlayer === 1 ? 2 : 1;
+            // 更新分数显示
             updatePlayerTurn();
         } else {
             // 单人模式，每次猜对得10分
             score += 10;
-        }
-        
-        // 更新分数显示
-        if (gameMode === 'single') {
             scoreElement.textContent = score;
         }
         
@@ -161,13 +152,25 @@ function handleCellClick(event) {
             endGame();
         }
     } else {
+        // 双人模式下，每次猜测后立即切换玩家，无论是否猜对
+        if (gameMode === 'double') {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updatePlayerTurn();
+        }
+        
         // 错误的数字，延长显示时间后隐藏
         setTimeout(() => {
             event.target.textContent = '';
             
-            // 在单人模式下不需要切换玩家，双人模式已在猜对时处理了玩家切换
+            // 单人模式下，每次猜错减1分（最低为0分）
+            if (gameMode === 'single') {
+                score = Math.max(0, score - 1);
+                scoreElement.textContent = score.toString();
+            }
         }, 900); // 延长显示时间，让玩家有更多时间看清数字
     }
+        
+
 }
 
 // 更新玩家回合显示

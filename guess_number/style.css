@@ -29,13 +29,31 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
 .timer, .moves, .game-status {
     margin: 5px 10px;
     font-weight: bold;
+}
+
+.game-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    background-color: #f0f8ff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.current-number, .player-turn {
+    margin: 5px 15px;
+    font-weight: bold;
+    font-size: 1.2em;
 }
 
 .game-board {
