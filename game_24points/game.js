@@ -14,6 +14,15 @@ const timerElement = document.getElementById('timer');
 const levelElement = document.getElementById('level');
 const gameModeSelector = document.getElementById('game-mode');
 
+// 检测是否为移动设备
+const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+};
+
+// 记录设备类型
+const isMobile = isMobileDevice();
+console.log('设备类型:', isMobile ? '移动设备' : '桌面设备');
+
 // 确保游戏模式选择器包含所有难度选项
 function updateGameModeOptions() {
     // 清空现有选项
@@ -56,11 +65,14 @@ let currentSolution = '';
 
 // 初始化游戏
 function initializeGame() {
+    console.log('初始化游戏');
+    
     // 重置游戏状态
     score = 0;
     seconds = 0;
     solvedProblems = 0;
     gameStarted = true;
+    currentSolution = ''; // 重置当前解法
     
     // 更新UI
     scoreElement.textContent = '0';
@@ -70,6 +82,7 @@ function initializeGame() {
     
     // 获取游戏模式
     gameMode = gameModeSelector.value;
+    console.log('游戏模式:', gameMode);
     
     // 根据游戏模式设置目标数字和难度
     if (gameMode === 'standard') {
@@ -81,7 +94,12 @@ function initializeGame() {
         levelElement.textContent = '难度: 简单';
     }
     
+    console.log('设置目标数字:', targetNumber);
     targetNumberElement.textContent = targetNumber;
+    
+    // 确保数字卡片容器可见
+    numberCardsElement.style.display = 'flex';
+    numberCardsElement.style.visibility = 'visible';
     
     // 生成新的数字
     generateNumbers();
@@ -101,12 +119,26 @@ function initializeGame() {
     
     // 初始化数字键盘
     initializeNumberKeyboard();
+    
+    // 确保在移动设备上正确显示
+    if (isMobile) {
+        console.log('移动设备初始化特殊处理');
+        // 使用更短的延迟时间，确保UI更新
+        setTimeout(() => {
+            console.log('延迟检查数字卡片显示');
+            renderNumberCards(); // 强制重新渲染卡片
+        }, 100);
+    }
 }
 
 // 生成随机数字
 function generateNumbers() {
     // 清空当前数字
     currentNumbers = [];
+    // 重置当前解决方案
+    currentSolution = '';
+    
+    console.log('生成数字，游戏模式:', gameMode);
     
     if (gameMode === 'standard') {
         // 标准模式：生成有解的24点题目
@@ -118,12 +150,22 @@ function generateNumbers() {
         }
     }
     
+    console.log('生成的数字:', currentNumbers);
+    
+    // 确保至少有4个数字
+    if (currentNumbers.length < 4) {
+        console.warn('生成的数字不足4个，使用默认数字');
+        currentNumbers = [1, 2, 3, 4]; // 使用默认数字
+    }
+    
     // 更新UI
     renderNumberCards();
 }
 
 // 生成有解的24点题目
 function generateSolvable24PointsNumbers() {
+    console.log('生成有解的24点题目');
+    
     // 根据游戏模式选择难度
     let difficulty;
     if (gameMode === 'easy') {
@@ -137,6 +179,8 @@ function generateSolvable24PointsNumbers() {
         const difficulties = ['easy', 'medium', 'hard'];
         difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
     }
+    
+    console.log('选择的难度:', difficulty);
     
     // 更新难度显示
     if (difficulty === 'easy') {
@@ -156,8 +200,16 @@ function generateSolvable24PointsNumbers() {
     // 确保目标数字正确设置
     targetNumber = gameMode === 'standard' ? 24 : targetNumber;
     
+    // 如果生成失败，使用默认数字
+    if (currentNumbers.length < 4) {
+        console.warn('生成数字失败，使用默认数字');
+        currentNumbers = [1, 2, 3, 4];
+    }
+    
     // 打乱数字顺序
     shuffleArray(currentNumbers);
+    
+    console.log('生成的数字:', currentNumbers);
 }
 
 // 生成有解的24点数字组合
@@ -215,6 +267,8 @@ function generateRandomNumbersWithSolution(min, max, difficulty) {
 function solve24Points(numbers) {
     const EPSILON = 1e-6; // 浮点数比较的精度阈值
     const TARGET = targetNumber; // 使用当前目标数字
+    
+    console.log('solve24Points被调用，目标数字:', TARGET, '游戏模式:', gameMode);
     
     // 检查两个浮点数是否相等
     function isEqual(a, b) {
@@ -320,7 +374,7 @@ function solve24Points(numbers) {
         }
         
         // 如果是最外层表达式，不需要括号
-        if (nums.length === 4) {
+        if (nums.length === 1) {
             return false;
         }
         
@@ -344,12 +398,28 @@ function solve24Points(numbers) {
 
 // 渲染数字卡片
 function renderNumberCards() {
+    // 清空现有卡片
     numberCardsElement.innerHTML = '';
     
+    console.log('渲染数字卡片:', currentNumbers);
+    
+    // 确保有数字可以渲染
+    if (currentNumbers.length === 0) {
+        console.error('没有数字可以渲染');
+        return;
+    }
+    
+    // 强制设置容器为可见
+    numberCardsElement.style.display = 'flex';
+    numberCardsElement.style.visibility = 'visible';
+    
+    // 创建并添加卡片
     for (let i = 0; i < currentNumbers.length; i++) {
         const card = document.createElement('div');
         card.className = 'number-card';
         card.textContent = currentNumbers[i];
+        card.style.display = 'flex'; // 确保卡片显示
+        card.style.visibility = 'visible'; // 确保卡片可见
         
         // 添加点击事件，将数字添加到表达式输入框
         card.addEventListener('click', () => {
@@ -359,6 +429,19 @@ function renderNumberCards() {
         });
         
         numberCardsElement.appendChild(card);
+    }
+    
+    // 在移动设备上进行额外处理
+    if (isMobile) {
+        // 强制重新计算布局
+        setTimeout(() => {
+            numberCardsElement.style.display = 'flex';
+            const cards = numberCardsElement.querySelectorAll('.number-card');
+            cards.forEach(card => {
+                card.style.display = 'flex';
+                card.style.visibility = 'visible';
+            });
+        }, 50);
     }
 }
 
@@ -500,6 +583,24 @@ function shuffleArray(array) {
 // 事件监听器
 startButton.addEventListener('click', () => {
     initializeGame();
+    
+    // 在移动设备上进行额外处理
+    if (isMobile) {
+        // 确保在移动设备上正确渲染数字卡片
+        setTimeout(() => {
+            console.log('移动设备重新渲染数字卡片');
+            renderNumberCards();
+            
+            // 强制显示数字卡片
+            const cards = numberCardsElement.querySelectorAll('.number-card');
+            cards.forEach(card => {
+                card.style.display = 'flex';
+            });
+            
+            // 确保卡片容器可见
+            numberCardsElement.style.display = 'flex';
+        }, 200);
+    }
 });
 
 nextButton.addEventListener('click', () => {
@@ -526,14 +627,18 @@ clearButton.addEventListener('click', () => {
 
 hintButton.addEventListener('click', () => {
     if (gameStarted) {
-        // 如果当前没有解决方案，重新计算一次
-        if (!currentSolution) {
-            const result = solve24Points(currentNumbers);
-            if (result.found) {
-                currentSolution = result.solution;
-            } else {
-                currentSolution = "无解";
-            }
+        // 每次点击提示按钮时重新计算解法，确保使用当前的目标数字
+        console.log('提示按钮被点击，目标数字:', targetNumber, '游戏模式:', gameMode);
+        
+        // 确保在简单模式下也能正确计算解法
+        const result = solve24Points(currentNumbers);
+        
+        if (result.found) {
+            currentSolution = result.solution;
+            console.log('找到解法:', currentSolution);
+        } else {
+            currentSolution = "无解";
+            console.log('未找到解法');
         }
         
         // 显示当前问题的答案提示

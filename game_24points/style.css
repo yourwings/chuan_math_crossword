@@ -301,6 +301,15 @@ button:disabled {
         width: 60px;
         height: 90px;
         font-size: 28px;
+        display: flex !important; /* 强制显示数字卡片 */
+    }
+    
+    .number-cards {
+        display: flex !important; /* 强制显示数字卡片容器 */
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin: 20px 0;
     }
     
     #expression-input {
@@ -316,6 +325,11 @@ button:disabled {
     .expression-container button {
         width: 100%;
         margin: 5px 0;
+        display: block !important; /* 确保按钮显示 */
+    }
+    
+    #hint-btn {
+        display: inline-block !important; /* 强制显示提示按钮 */
     }
     
     .keyboard-key {
