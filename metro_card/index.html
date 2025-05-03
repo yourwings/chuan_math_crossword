@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川地铁牌</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川地铁牌</h1>
+        <div class="score-container">
+            <span>分数: </span>
+            <span id="score">0</span>
+            <div id="timer" class="timer">时间: 00:00</div>
+            <div id="cards-left" class="cards-left">剩余牌数: 0</div>
+        </div>
+        
+        <div class="game-area">
+            <div id="current-card" class="current-card">
+                <div class="card-content">
+                    <div class="station-name">点击开始游戏</div>
+                    <div class="station-lines"></div>
+                </div>
+            </div>
+            
+            <div class="game-controls">
+                <div class="settings">
+                    <div class="setting-item">
+                        <label for="game-mode">游戏模式：</label>
+                        <select id="game-mode">
+                            <option value="standard" selected>标准模式</option>
+                            <option value="time-challenge">限时挑战</option>
+                            <option value="line-match">线路匹配</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="difficulty">难度：</label>
+                        <select id="difficulty">
+                            <option value="easy" selected>简单</option>
+                            <option value="medium">中等</option>
+                            <option value="hard">困难</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button id="start-btn" class="control-btn">开始游戏</button>
+                <button id="next-btn" class="control-btn" disabled>下一张</button>
+                <button id="hint-btn" class="control-btn" disabled>提示</button>
+                <button id="back-btn" class="control-btn">返回</button>
+            </div>
+        </div>
+        
+        <div class="answer-area">
+            <div id="answer-options" class="answer-options">
+                <!-- 答案选项将在JS中动态生成 -->
+            </div>
+            <div id="result-message" class="result-message"></div>
+        </div>
+        
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>游戏基于北京地铁线路图，每张牌显示一个地铁站名</li>
+                    <li>你需要选择该站点所属的所有地铁线路</li>
+                    <li>标准模式：正确选择所有线路得10分，每选错一条线路扣2分</li>
+                    <li>限时挑战：在规定时间内回答尽可能多的题目</li>
+                    <li>线路匹配：给定线路，选择属于该线路的站点</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>游戏结束</h2>
+            <div id="game-result"></div>
+            <button id="play-again-btn">再玩一次</button>
+            <button id="return-home-btn">返回主页</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>

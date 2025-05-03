@@ -248,7 +248,69 @@ startButton.addEventListener('click', () => {
 });
 
 restartButton.addEventListener('click', () => {
-    initializeGame();
+    // 重置游戏状态但不自动开始计时
+    // 重置游戏变量
+    gameBoard = [];
+    currentNumber = 1;
+    moves = 0;
+    score = 0;
+    seconds = 0;
+    player1Score = 0;
+    player2Score = 0;
+    player1Numbers = [];
+    player2Numbers = [];
+    currentPlayer = 1;
+    gameStarted = false;
+    
+    // 停止计时器
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+    
+    // 更新UI
+    movesElement.textContent = '翻牌次数: 0';
+    timerElement.textContent = '时间: 00:00';
+    currentNumberElement.textContent = currentNumber;
+    
+    // 获取游戏模式
+    gameMode = gameModeSelector.value;
+    
+    // 根据游戏模式设置不同的分数显示
+    if (gameMode === 'double') {
+        scoreElement.innerHTML = `<span class="player1-score">玩家1: 0</span> | <span class="player2-score">玩家2: 0</span>`;
+    } else {
+        scoreElement.textContent = '0';
+    }
+    
+    // 更新玩家回合显示
+    updatePlayerTurn();
+    
+    // 生成1-25的随机数字数组
+    const numbers = Array.from({length: 25}, (_, i) => i + 1);
+    shuffleArray(numbers);
+    
+    // 创建游戏板
+    gameBoardElement.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        cell.dataset.value = numbers[i];
+        
+        // 添加点击事件
+        cell.addEventListener('click', handleCellClick);
+        
+        gameBoardElement.appendChild(cell);
+        gameBoard.push({
+            value: numbers[i],
+            revealed: false,
+            owner: null // 用于双人模式
+        });
+    }
+    
+    // 启用开始游戏按钮
+    startButton.disabled = false;
 });
 
 backButton.addEventListener('click', () => {

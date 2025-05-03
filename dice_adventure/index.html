@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字飞行棋</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>数字飞行棋</h1>
+        <div class="game-info">
+            <div id="current-player" class="current-player">当前玩家: 玩家1</div>
+            <div id="game-status" class="game-status">准备开始</div>
+        </div>
+        
+        <div class="board-container">
+            <div id="game-board" class="game-board">
+                <!-- 游戏棋盘将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <div class="dice-container">
+            <div id="dice" class="dice">6</div>
+            <button id="roll-dice" class="roll-btn">掷骰子</button>
+        </div>
+        
+        <div class="player-container" id="player-container">
+            <!-- 玩家信息将通过JavaScript动态生成 -->
+        </div>
+        
+        <div class="event-container" id="event-container">
+            <div id="event-message" class="event-message"></div>
+            <div id="event-action" class="event-action">
+                <!-- 事件操作按钮将在需要时显示 -->
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="settings">
+                <label for="player-count">玩家数量：</label>
+                <select id="player-count">
+                    <option value="1">1人</option>
+                    <option value="2" selected>2人</option>
+                    <option value="3">3人</option>
+                    <option value="4">4人</option>
+                </select>
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn">重新开始</button>
+            <button id="back-btn">返回</button>
+        </div>
+        
+        <div class="game-instructions">
+            <p>游戏规则：<button id="toggle-rules" class="toggle-btn">隐藏规则</button></p>
+            <div id="rules-content">
+                <ul>
+                    <li>游戏在10x10的棋盘上进行，玩家轮流掷骰子前进</li>
+                    <li>棋盘上有特殊格子：前进、后退、计算题、比较大小</li>
+                    <li>完成特殊格子的挑战才能继续游戏</li>
+                    <li>第一个到达终点的玩家获胜</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>

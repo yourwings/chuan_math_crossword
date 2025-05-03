@@ -13,6 +13,27 @@ const scoreElement = document.getElementById('score');
 const timerElement = document.getElementById('timer');
 const levelElement = document.getElementById('level');
 const gameModeSelector = document.getElementById('game-mode');
+
+// 确保游戏模式选择器包含所有难度选项
+function updateGameModeOptions() {
+    // 清空现有选项
+    gameModeSelector.innerHTML = '';
+    
+    // 添加难度选项
+    const options = [
+        {value: 'standard', text: '标准模式 (随机难度)'},
+        {value: 'easy', text: '简单模式'},
+        {value: 'medium', text: '中等模式'},
+        {value: 'hard', text: '困难模式'}
+    ];
+    
+    options.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.text;
+        gameModeSelector.appendChild(optionElement);
+    });
+}
 const numberCardsElement = document.getElementById('number-cards');
 const targetNumberElement = document.getElementById('target-number');
 const expressionInput = document.getElementById('expression-input');
@@ -21,6 +42,7 @@ const startButton = document.getElementById('start-btn');
 const nextButton = document.getElementById('next-btn');
 const checkButton = document.getElementById('check-btn');
 const clearButton = document.getElementById('clear-btn');
+const hintButton = document.getElementById('hint-btn');
 const backButton = document.getElementById('back-btn');
 const toggleRulesButton = document.getElementById('toggle-rules');
 const rulesContent = document.getElementById('rules-content');
@@ -28,6 +50,9 @@ const gameOverModal = document.getElementById('game-over-modal');
 const gameResultElement = document.getElementById('game-result');
 const playAgainButton = document.getElementById('play-again-btn');
 const returnHomeButton = document.getElementById('return-home-btn');
+
+// 存储当前问题的答案
+let currentSolution = '';
 
 // 初始化游戏
 function initializeGame() {
@@ -99,36 +124,222 @@ function generateNumbers() {
 
 // 生成有解的24点题目
 function generateSolvable24PointsNumbers() {
-    // 预设一些经典的24点题目
-    const classicProblems = [
-        [1, 2, 3, 4],     // (1+2+3)*4 = 24
-        [2, 3, 4, 5],     // (5-2-3)*4 = 0
-        [3, 3, 8, 8],     // (8/8+3)*8 = 32
-        [1, 4, 5, 6],     // (1+5)*4 = 24
-        [2, 3, 10, 10],   // (10*10-2)/3 = 32.67
-        [1, 5, 5, 5],     // (5+5+5+1) = 16
-        [1, 3, 4, 6],     // (1+3)*6 = 24
-        [2, 4, 6, 8],     // (8-2)*4 = 24
-        [3, 4, 5, 6],     // 4*6 = 24
-        [1, 1, 8, 8],     // (8/1)*(8/1) = 64
-        [2, 5, 5, 10],    // 10*5/5*2 = 20
-        [3, 3, 7, 7],     // (7-3)*(7-3) = 16
-        [4, 4, 6, 6],     // (6+6)*(4-4) = 0
-        [2, 3, 3, 4],     // (3+3+2)*4 = 32
-        [1, 2, 5, 10],    // (10-1)*5/2 = 22.5
-        [1, 3, 3, 9],     // (9-1)*3 = 24
-        [2, 2, 6, 6],     // (6+6)*2 = 24
-        [3, 5, 7, 9],     // (9-5)*7/3 = 9.33
-        [1, 4, 7, 8],     // (8-4)*(7-1) = 24
-        [2, 2, 3, 12]     // 12*2 = 24
-    ];
+    // 根据游戏模式选择难度
+    let difficulty;
+    if (gameMode === 'easy') {
+        difficulty = 'easy';
+    } else if (gameMode === 'medium') {
+        difficulty = 'medium';
+    } else if (gameMode === 'hard') {
+        difficulty = 'hard';
+    } else {
+        // 在标准模式下，随机选择难度
+        const difficulties = ['easy', 'medium', 'hard'];
+        difficulty = difficulties[Math.floor(Math.random() * difficulties.length)];
+    }
     
-    // 随机选择一个问题
-    const selectedProblem = classicProblems[Math.floor(Math.random() * classicProblems.length)];
-    currentNumbers = [...selectedProblem];
+    // 更新难度显示
+    if (difficulty === 'easy') {
+        levelElement.textContent = '难度: 简单';
+        // 简单难度：生成1-10之间的数字
+        generateRandomNumbersWithSolution(1, 10, difficulty);
+    } else if (difficulty === 'medium') {
+        levelElement.textContent = '难度: 中等';
+        // 中等难度：生成1-13之间的数字
+        generateRandomNumbersWithSolution(1, 13, difficulty);
+    } else {
+        levelElement.textContent = '难度: 困难';
+        // 困难难度：生成1-13之间的数字，但更倾向于生成需要除法的题目
+        generateRandomNumbersWithSolution(1, 13, difficulty);
+    }
+    
+    // 确保目标数字正确设置
+    targetNumber = gameMode === 'standard' ? 24 : targetNumber;
     
     // 打乱数字顺序
     shuffleArray(currentNumbers);
+}
+
+// 生成有解的24点数字组合
+function generateRandomNumbersWithSolution(min, max, difficulty) {
+    // 最大尝试次数，防止无限循环
+    const maxAttempts = 100;
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+        // 生成4个随机数
+        const numbers = [];
+        for (let i = 0; i < 4; i++) {
+            numbers.push(Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+        
+        // 尝试求解24点
+        const result = solve24Points(numbers);
+        
+        // 如果找到解，则使用这组数字
+        if (result.found) {
+            currentNumbers = [...numbers];
+            currentSolution = result.solution;
+            return;
+        }
+        
+        attempts++;
+    }
+    
+    // 如果尝试多次仍未找到解，使用一些确定有解的数字组合
+    const fallbackNumbers = [
+        [1, 2, 3, 4],  // (1+3)*2*4 = 24
+        [2, 3, 4, 5],  // (5+3-2)*4 = 24
+        [3, 4, 5, 6],  // (5+3-4)*6 = 24
+        [4, 6, 7, 8],  // 4*6*(8-7) = 24
+        [5, 5, 9, 9],  // 5*5-9/9 = 24
+        [1, 4, 7, 8],  // (8-4)*(7-1) = 24
+        [2, 5, 7, 10], // (7-5)*(10+2) = 24
+        [3, 8, 8, 8]   // (8/8+3)*8 = 24
+    ];
+    
+    const selectedFallback = fallbackNumbers[Math.floor(Math.random() * fallbackNumbers.length)];
+    currentNumbers = [...selectedFallback];
+    
+    // 重新计算解法
+    const fallbackResult = solve24Points(selectedFallback);
+    if (fallbackResult.found) {
+        currentSolution = fallbackResult.solution;
+    } else {
+        // 这种情况不应该发生，因为我们选择的是已知有解的组合
+        currentSolution = "有解，但未能自动生成解法";
+    }
+}
+
+// 24点求解算法
+function solve24Points(numbers) {
+    const EPSILON = 1e-6; // 浮点数比较的精度阈值
+    const TARGET = targetNumber; // 使用当前目标数字
+    
+    // 检查两个浮点数是否相等
+    function isEqual(a, b) {
+        return Math.abs(a - b) < EPSILON;
+    }
+    
+    // 递归求解函数
+    function search(nums, expressions) {
+        // 如果只剩一个数，检查是否等于目标值
+        if (nums.length === 1) {
+            if (isEqual(nums[0], TARGET)) {
+                return { found: true, solution: expressions[0] + " = " + TARGET };
+            }
+            return { found: false };
+        }
+        
+        // 尝试所有可能的数字对组合
+        for (let i = 0; i < nums.length; i++) {
+            for (let j = i + 1; j < nums.length; j++) {
+                const a = nums[i];
+                const b = nums[j];
+                const exprA = expressions[i];
+                const exprB = expressions[j];
+                
+                // 创建新的数组，移除已使用的两个数
+                const newNums = nums.filter((_, idx) => idx !== i && idx !== j);
+                
+                // 尝试加法
+                newNums.push(a + b);
+                const newExprsAdd = expressions.filter((_, idx) => idx !== i && idx !== j);
+                // 判断是否需要括号
+                const addExpr = needParentheses(exprA, exprB, '+') ? `(${exprA}+${exprB})` : `${exprA}+${exprB}`;
+                newExprsAdd.push(addExpr);
+                const resultAdd = search(newNums, newExprsAdd);
+                if (resultAdd.found) return resultAdd;
+                newNums.pop();
+                
+                // 尝试减法 (a-b)
+                newNums.push(a - b);
+                const newExprsSub1 = expressions.filter((_, idx) => idx !== i && idx !== j);
+                // 判断是否需要括号
+                const sub1Expr = needParentheses(exprA, exprB, '-') ? `(${exprA}-${exprB})` : `${exprA}-${exprB}`;
+                newExprsSub1.push(sub1Expr);
+                const resultSub1 = search(newNums, newExprsSub1);
+                if (resultSub1.found) return resultSub1;
+                newNums.pop();
+                
+                // 尝试减法 (b-a)
+                newNums.push(b - a);
+                const newExprsSub2 = expressions.filter((_, idx) => idx !== i && idx !== j);
+                // 判断是否需要括号
+                const sub2Expr = needParentheses(exprB, exprA, '-') ? `(${exprB}-${exprA})` : `${exprB}-${exprA}`;
+                newExprsSub2.push(sub2Expr);
+                const resultSub2 = search(newNums, newExprsSub2);
+                if (resultSub2.found) return resultSub2;
+                newNums.pop();
+                
+                // 尝试乘法
+                newNums.push(a * b);
+                const newExprsMul = expressions.filter((_, idx) => idx !== i && idx !== j);
+                // 判断是否需要括号
+                const mulExpr = needParentheses(exprA, exprB, '*') ? `(${exprA}*${exprB})` : `${exprA}*${exprB}`;
+                newExprsMul.push(mulExpr);
+                const resultMul = search(newNums, newExprsMul);
+                if (resultMul.found) return resultMul;
+                newNums.pop();
+                
+                // 尝试除法 (a/b)，注意除数不能为0
+                if (!isEqual(b, 0)) {
+                    newNums.push(a / b);
+                    const newExprsDiv1 = expressions.filter((_, idx) => idx !== i && idx !== j);
+                    // 判断是否需要括号
+                    const div1Expr = needParentheses(exprA, exprB, '/') ? `(${exprA}/${exprB})` : `${exprA}/${exprB}`;
+                    newExprsDiv1.push(div1Expr);
+                    const resultDiv1 = search(newNums, newExprsDiv1);
+                    if (resultDiv1.found) return resultDiv1;
+                    newNums.pop();
+                }
+                
+                // 尝试除法 (b/a)，注意除数不能为0
+                if (!isEqual(a, 0)) {
+                    newNums.push(b / a);
+                    const newExprsDiv2 = expressions.filter((_, idx) => idx !== i && idx !== j);
+                    // 判断是否需要括号
+                    const div2Expr = needParentheses(exprB, exprA, '/') ? `(${exprB}/${exprA})` : `${exprB}/${exprA}`;
+                    newExprsDiv2.push(div2Expr);
+                    const resultDiv2 = search(newNums, newExprsDiv2);
+                    if (resultDiv2.found) return resultDiv2;
+                    newNums.pop();
+                }
+            }
+        }
+        
+        // 如果所有组合都尝试过了，仍然没有找到解
+        return { found: false };
+    }
+    
+    // 判断表达式是否需要括号
+    function needParentheses(expr1, expr2, operator) {
+        // 如果表达式只是单个数字，不需要括号
+        if (!isNaN(expr1) && !isNaN(expr2)) {
+            return false;
+        }
+        
+        // 如果是最外层表达式，不需要括号
+        if (nums.length === 4) {
+            return false;
+        }
+        
+        // 根据运算符优先级判断是否需要括号
+        // 乘除法优先级高于加减法
+        if ((operator === '+' || operator === '-') && 
+            (expr1.includes('*') || expr1.includes('/') || 
+             expr2.includes('*') || expr2.includes('/'))) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // 初始化表达式数组，每个数字对应一个表达式
+    const expressions = numbers.map(num => num.toString());
+    
+    // 开始搜索
+    return search([...numbers], expressions);
 }
 
 // 渲染数字卡片
@@ -313,6 +524,26 @@ clearButton.addEventListener('click', () => {
     resultMessageElement.className = 'result-message';
 });
 
+hintButton.addEventListener('click', () => {
+    if (gameStarted) {
+        // 如果当前没有解决方案，重新计算一次
+        if (!currentSolution) {
+            const result = solve24Points(currentNumbers);
+            if (result.found) {
+                currentSolution = result.solution;
+            } else {
+                currentSolution = "无解";
+            }
+        }
+        
+        // 显示当前问题的答案提示
+        showMessage(`提示答案: ${currentSolution}`, 'hint');
+        // 扣除一些分数作为使用提示的代价
+        score = Math.max(0, score - 5);
+        scoreElement.textContent = score;
+    }
+});
+
 backButton.addEventListener('click', () => {
     window.location.href = '../index.html';
 });
@@ -345,14 +576,11 @@ expressionInput.addEventListener('keydown', (event) => {
 
 // 游戏模式选择器事件
 gameModeSelector.addEventListener('change', () => {
-    // 如果游戏已经开始，切换模式会重置游戏
+    // 如果游戏已经开始，不允许切换模式
     if (gameStarted) {
-        if (confirm('切换游戏模式将重新开始游戏，确定要切换吗？')) {
-            initializeGame();
-        } else {
-            // 恢复之前的选择
-            gameModeSelector.value = gameMode;
-        }
+        // 恢复之前的选择，不提示确认
+        gameModeSelector.value = gameMode;
+        showMessage('游戏已开始，不能切换游戏模式', 'incorrect');
     } else {
         // 更新目标数字显示
         if (gameModeSelector.value === 'standard') {
@@ -403,6 +631,9 @@ document.addEventListener('DOMContentLoaded', () => {
     nextButton.disabled = true;
     checkButton.disabled = true;
     clearButton.disabled = true;
+    
+    // 初始化游戏模式选择器
+    updateGameModeOptions();
     
     // 初始化数字键盘
     initializeNumberKeyboard();

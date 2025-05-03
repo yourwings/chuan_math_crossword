@@ -1,0 +1,23 @@
+{
+  "name": "chuan_math_crossword",
+  "version": "1.0.0",
+  "description": "## 项目概述 小川数字迷宫是一个数字类游戏集合项目，旨在通过有趣的数学游戏提高玩家的数学思维能力。目前已开发的游戏包括\"小川算术格\"和\"小川数独\"，未来将陆续推出更多数字类游戏。",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourwings/chuan_math_crossword.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yourwings/chuan_math_crossword/issues"
+  },
+  "homepage": "https://github.com/yourwings/chuan_math_crossword#readme",
+  "devDependencies": {
+    "vite": "^6.3.4"
+  }
+}

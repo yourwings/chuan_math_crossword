@@ -121,6 +121,11 @@ h1 {
     color: #F44336;
 }
 
+.result-message.hint {
+    color: #2196F3;
+    font-style: italic;
+}
+
 .controls {
     display: flex;
     justify-content: center;
