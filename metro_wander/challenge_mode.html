@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北京地铁漫游 - 挑战模式</title>
+  <link rel="stylesheet" href="metro_styles.css">
+  <link rel="stylesheet" href="challenge_mode.css">
+  <style>
+    .challenge-container {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .challenge-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      flex-wrap: wrap;
+    }
+
+    .challenge-info div {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .found-routes {
+      margin-top: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    .route-item {
+      padding: 8px;
+      margin-bottom: 5px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      border-left: 4px solid #0078d7;
+    }
+
+    .game-result {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(0, 120, 215, 0.1);
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+    }
+
+    .game-result h3 {
+      color: #0078d7;
+      margin-bottom: 10px;
+    }
+
+    .metro-cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .metro-card {
+      padding: 8px 12px;
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .metro-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .metro-card.selected {
+      background-color: #e3f2fd;
+      border-color: #0078d7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>北京地铁漫游 - 挑战模式</h1>
+      <p>在限定时间内，找出尽可能多的从起点到终点的有效路线</p>
+    </header>
+
+    <div class="game-info">
+      <div id="score">得分: 0</div>
+      <div id="timer">时间: 05:00</div>
+    </div>
+
+    <div class="game-controls">
+      <div class="settings">
+        <div class="setting-item">
+          <label for="challenge-time">挑战时间:</label>
+          <select id="challenge-time">
+            <option value="180">3分钟</option>
+            <option value="300" selected>5分钟</option>
+            <option value="600">10分钟</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label for="cards-count">地铁牌数量:</label>
+          <select id="cards-count">
+            <option value="15">15张</option>
+            <option value="20" selected>20张</option>
+            <option value="25">25张</option>
+          </select>
+        </div>
+      </div>
+      <button id="start-challenge-btn">开始挑战</button>
+      <button id="reset-path-btn" disabled>重置当前路径</button>
+    </div>
+
+    <div id="challenge-ui" style="display: none;">
+      <div class="challenge-container">
+        <div class="challenge-info">
+          <div id="start-station">起点站: </div>
+          <div id="end-station">终点站: </div>
+        </div>
+
+        <h3>当前路径</h3>
+        <div id="current-path" class="path-display"></div>
+
+        <h3>地铁牌</h3>
+        <div id="player-hand" class="metro-cards-container"></div>
+
+        <button id="submit-path-btn" disabled>提交路径</button>
+
+        <h3>已找到的路线 (<span id="found-routes-count">0</span>)</h3>
+        <div id="found-routes" class="found-routes"></div>
+      </div>
+
+      <div id="game-result" class="game-result">
+        <h3>挑战结束!</h3>
+        <p>你找到了 <span id="final-score">0</span> 条有效路线</p>
+        <div id="result-routes" class="found-routes"></div>
+        <div class="result-buttons">
+          <button id="retry-btn">重新挑战</button>
+          <button id="new-challenge-btn">新的挑战</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading-indicator" style="display: none;">加载中...</div>
+
+    <div class="back-button">
+      <button onclick="window.location.href='index.html'">返回主页</button>
+    </div>
+  </div>
+
+  <script type="module" src="challenge_mode.js"></script>
+</body>
+</html>

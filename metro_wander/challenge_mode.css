@@ -1,0 +1,131 @@
+/* 挑战模式样式 */
+
+/* 起点站和终点站标识 */
+.station-label {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  display: inline-block;
+}
+
+.start-label {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.end-label {
+  background-color: #F44336;
+  color: white;
+}
+
+/* 迷你终点标记 */
+.mini-end-label {
+  background-color: #F44336;
+  color: white;
+  font-size: 10px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+/* 紧凑型路线显示 */
+.compact-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.compact-station {
+  position: relative;
+  padding: 5px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+  font-size: 14px;
+  min-width: 60px;
+  max-width: 120px;
+  text-align: center;
+}
+
+.compact-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 3px;
+}
+
+.compact-line-tag {
+  font-size: 10px;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.compact-arrow {
+  font-size: 14px;
+  color: #666;
+}
+
+.compact-transfer {
+  border: 1px solid #FFC107;
+}
+
+.more-lines {
+  font-size: 10px;
+  background-color: #ddd;
+  color: #333;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* 响应式样式 */
+@media (max-width: 768px) {
+  .route-item {
+    margin-bottom: 15px;
+  }
+  
+  .compact-station {
+    min-width: 50px;
+    max-width: 100px;
+    font-size: 12px;
+  }
+  
+  .compact-line-tag {
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+  
+  .compact-arrow {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .compact-station {
+    min-width: 40px;
+    max-width: 80px;
+    font-size: 11px;
+    padding: 3px;
+  }
+  
+  .compact-lines {
+    gap: 1px;
+  }
+  
+  .compact-line-tag {
+    font-size: 8px;
+    padding: 0px 2px;
+  }
+  
+  .station-label {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+}

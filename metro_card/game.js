@@ -600,7 +600,17 @@ function initSoloExplorationNextQuestion(isCreatorMode = false) {
     }
     
     // 显示起点站和终点站及其线路信息
+    console.log('下一题初始化 - 起点站:', startStation, '终点站:', endStation);
     updateStationDisplay();
+    
+    // 确保终点站元素可见
+    const endStationEl = isCreatorModeActive ? document.getElementById('creator-end-station') : document.getElementById('end-station');
+    if (endStationEl) {
+      endStationEl.style.display = 'block';
+      console.log('已设置终点站元素可见:', endStationEl.id);
+    } else {
+      console.error('无法找到终点站元素');
+    }
     
     // 发放地铁牌给玩家（随机选择合理数量的牌）
     dealMetroCards(10); // 限制为最多10张牌
@@ -725,7 +735,17 @@ function initSoloExploration(isCreatorMode = false) {
     console.log('选择的终点站:', endStation);
     
     // 显示起点站和终点站及其线路信息
+    console.log('下一题初始化 - 起点站:', startStation, '终点站:', endStation);
     updateStationDisplay();
+    
+    // 确保终点站元素可见
+    const endStationEl = isCreatorModeActive ? document.getElementById('creator-end-station') : document.getElementById('end-station');
+    if (endStationEl) {
+      endStationEl.style.display = 'block';
+      console.log('已设置终点站元素可见:', endStationEl.id);
+    } else {
+      console.error('无法找到终点站元素');
+    }
     
     // 发放地铁牌给玩家（随机选择合理数量的牌）
     dealMetroCards(10); // 限制为最多10张牌
@@ -772,7 +792,7 @@ function findPath(start, end, maxLength, minLength = 1) {
         minLength = 1;  // 允许任何长度的路径
       } else {
         // 单人漫游模式，确保路径长度合理
-        maxLength = Math.min(maxLength, 8); // 限制最大路径长度
+        maxLength = Math.min(maxLength, 12); // 增加最大路径长度，确保能找到更多可能的路径
         minLength = Math.max(minLength, 1); // 确保最小路径长度至少为1
       }
       
@@ -801,9 +821,9 @@ function findPath(start, end, maxLength, minLength = 1) {
       const validPaths = [];
       
       // 优化：设置最大队列长度，防止内存溢出
-      const MAX_QUEUE_SIZE = 30000; // 增加队列大小以提高搜索效率
+      const MAX_QUEUE_SIZE = 50000; // 增加队列大小以提高搜索效率
       // 优化：设置最大搜索时间（毫秒）
-      const MAX_SEARCH_TIME = isCreatorMode ? 10000 : 20000; // 在单人漫游模式下增加搜索时间，提高找到有效路径的概率
+      const MAX_SEARCH_TIME = isCreatorMode ? 15000 : 25000; // 增加搜索时间，提高找到有效路径的概率
       const startTime = Date.now();
       
       // 优化：预先计算所有站点的连接关系，避免重复查询
@@ -813,7 +833,7 @@ function findPath(start, end, maxLength, minLength = 1) {
       });
       
       // 优化：设置最大路径数量
-      const MAX_VALID_PATHS = isCreatorMode ? 5 : 15; // 在单人漫游模式下增加需要找到的路径数量
+      const MAX_VALID_PATHS = isCreatorMode ? 10 : 20; // 增加需要找到的路径数量
   
   while (queue.length > 0) {
     // 优化：检查是否超时或队列过长
@@ -892,26 +912,59 @@ function findPath(start, end, maxLength, minLength = 1) {
     // 获取当前站点的所有相邻站点（使用预先计算的连接关系）
     const neighbors = stationConnections[currentStation] || [];
     
-    // 优化：随机打乱邻居顺序，避免总是选择相同的路径
-    shuffleArray(neighbors);
-    
+    // 优化：不再随机打乱邻居顺序，而是优先选择换乘站
     // 优化：限制每个节点的分支数量，但增加分支数量以提高找到有效路径的概率
-    const MAX_BRANCHES = 8;
+    const MAX_BRANCHES = 12; // 增加分支数量，提高搜索广度
+    
     // 优先选择换乘站，提高查找效率和成功率
+    // 增强换乘站的优先级评分系统
     const sortedNeighbors = [...neighbors].sort((a, b) => {
       const stationA = metroData.stations.find(s => s.name === a);
       const stationB = metroData.stations.find(s => s.name === b);
-      // 如果是换乘站，优先级更高
+      
       if (stationA && stationB) {
-        return (stationB.istransfer || 0) - (stationA.istransfer || 0);
+        // 主要优先级：换乘站优先
+        const transferDiff = (stationB.istransfer || 0) - (stationA.istransfer || 0);
+        if (transferDiff !== 0) return transferDiff;
+        
+        // 次要优先级：线路数量更多的站点优先
+        const lineCountDiff = (stationB.lines?.length || 0) - (stationA.lines?.length || 0);
+        if (lineCountDiff !== 0) return lineCountDiff;
+        
+        // 第三优先级：如果终点站有特定线路，优先选择有相同线路的站点
+        if (endStationObj) {
+          const aSharesLineWithEnd = stationA.lines?.some(line => endStationObj.lines.includes(line)) ? 1 : 0;
+          const bSharesLineWithEnd = stationB.lines?.some(line => endStationObj.lines.includes(line)) ? 1 : 0;
+          return bSharesLineWithEnd - aSharesLineWithEnd;
+        }
       }
       return 0;
     });
     
-    const limitedNeighbors = sortedNeighbors.slice(0, MAX_BRANCHES);
+    // 增加分支数量，但确保不会超过实际邻居数量
+    const limitedNeighbors = sortedNeighbors.slice(0, Math.min(MAX_BRANCHES, sortedNeighbors.length));
+    
+    // 如果当前路径长度已经接近最大长度，且邻居中有终点站相关线路的站点，优先考虑这些站点
+    if (currentDepth >= maxLength * 0.7 && endStationObj) {
+      const endLineNeighbors = limitedNeighbors.filter(neighbor => {
+        const neighborStation = metroData.stations.find(s => s.name === neighbor);
+        return neighborStation && neighborStation.lines?.some(line => endStationObj.lines.includes(line));
+      });
+      
+      // 如果找到了有终点站线路的邻居，优先处理这些邻居
+      if (endLineNeighbors.length > 0) {
+        console.log('路径接近最大长度，优先考虑终点站线路的邻居站点');
+        // 将这些邻居放在处理队列的前面
+        limitedNeighbors.sort((a, b) => {
+          const aHasEndLine = endLineNeighbors.includes(a) ? 1 : 0;
+          const bHasEndLine = endLineNeighbors.includes(b) ? 1 : 0;
+          return bHasEndLine - aHasEndLine;
+        });
+      }
+    }
     
     for (const neighbor of limitedNeighbors) {
-      // 跳过终点站，确保终点站不会出现在地铁牌中
+      // 处理终点站的情况
       if (neighbor === end) {
         // 如果是直接相连且要求至少经过一个中间站，则需要检查路径长度
         if (directlyConnected && path.length === 1 && minLength > 1) {
@@ -919,13 +972,23 @@ function findPath(start, end, maxLength, minLength = 1) {
         }
         // 如果路径长度已经达到最小要求，直接添加到路径中
         if (path.length >= minLength) {
-          queue.push([...path, neighbor]);
+          // 将终点站路径放在队列前面，提高处理优先级
+          queue.unshift([...path, neighbor]);
         }
       } 
-      // 如果邻居不是终点站且未访问过或找到了更短的路径
+      // 如果邻居不是终点站
       else if (!visited.has(neighbor) || (visited.has(neighbor) && visited.get(neighbor) > currentDepth + 1)) {
         visited.set(neighbor, currentDepth + 1);
-        queue.push([...path, neighbor]);
+        
+        // 如果是换乘站，优先处理（放在队列前面）
+        const neighborStation = metroData.stations.find(s => s.name === neighbor);
+        if (neighborStation && neighborStation.istransfer === 1) {
+          // 将换乘站路径放在队列前面，但在终点站之后
+          queue.splice(0, 0, [...path, neighbor]);
+        } else {
+          // 非换乘站正常添加到队列末尾
+          queue.push([...path, neighbor]);
+        }
       }
     }
   }
@@ -1161,7 +1224,7 @@ function dealMetroCards(count) {
       maxStations = 4;
   }
   
-  console.log(`根据难度${difficulty}设置路径长度：最小${minStations}，最大${maxStations}`)
+  console.log(`根据难度${difficulty}设置路径长度：最小${minStations}，最大${maxStations}`);
   
   // 检查起点站和终点站是否在同一条线路上
   const startStationObj = metroData.stations.find(s => s.name === startStation);
@@ -1254,10 +1317,6 @@ function dealMetroCards(count) {
   // 创建一个空的手牌数组
   playerHand = [];
   
-  // 获取当前游戏模式
-  //const gameModeSelect = document.getElementById('game-mode');
-  //const isCreatorMode = gameModeSelect && gameModeSelect.value === 'solo-exploration-creator';
-  
   console.log(`尝试寻找从${startStation}到${endStation}的路径，最小长度${minStations}，最大长度${maxStations}`);
   console.log('当前模式:', isCreatorMode ? '出题版模式' : '普通模式');
   
@@ -1270,22 +1329,58 @@ function dealMetroCards(count) {
       // 如果找到了符合难度要求的路径
       console.log('找到从', startStation, '到', endStation, '的路径:', path);
       
-      // 将路径中的站点添加到玩家手牌中
-      for (const station of path) {
-        playerHand.push(station);
-        usedStations.add(station);
+      // 将路径中的站点添加到玩家手牌中，优先添加换乘站
+      // 首先将路径中的站点按换乘站优先级排序
+      const sortedPathStations = [...path].sort((a, b) => {
+        const stationA = metroData.stations.find(s => s.name === a);
+        const stationB = metroData.stations.find(s => s.name === b);
+        // 如果是换乘站，优先级更高
+        if (stationA && stationB) {
+          return (stationB.istransfer || 0) - (stationA.istransfer || 0);
+        }
+        return 0;
+      });
+      
+      // 如果路径长度超过手牌上限，优先选择换乘站
+      if (path.length > actualCount) {
+        console.log('路径长度超过手牌上限，优先选择换乘站');
+        // 先添加换乘站
+        for (const station of sortedPathStations) {
+          const stationObj = metroData.stations.find(s => s.name === station);
+          if (stationObj && stationObj.istransfer === 1 && playerHand.length < actualCount) {
+            playerHand.push(station);
+            usedStations.add(station);
+          }
+        }
+        
+        // 如果换乘站不足，再添加非换乘站
+        if (playerHand.length < actualCount) {
+          for (const station of sortedPathStations) {
+            if (!playerHand.includes(station) && playerHand.length < actualCount) {
+              playerHand.push(station);
+              usedStations.add(station);
+            }
+          }
+        }
+      } else {
+        // 如果路径长度不超过手牌上限，直接添加所有站点
+        for (const station of path) {
+          playerHand.push(station);
+          usedStations.add(station);
+        }
       }
       
       // 如果路径长度小于actualCount，随机添加其他站点
       const remainingCards = actualCount - playerHand.length;
       console.log('需要添加的额外随机站点数量:', remainingCards);
       
-      for (let i = 0; i < remainingCards; i++) {
+      for (let i = 0; i < remainingCards && playerHand.length < actualCount; i++) {
         let randomStation;
         let attempts = 0;
         const maxAttempts = 50; // 防止无限循环
         
         do {
+          // 确保randomStation被正确初始化
           randomStation = stationNames[Math.floor(Math.random() * stationNames.length)];
           attempts++;
           if (attempts > maxAttempts) {
@@ -1293,9 +1388,9 @@ function dealMetroCards(count) {
             console.log('尝试次数过多，放宽选择条件');
             break;
           }
-        } while (usedStations.has(randomStation)); // 终点站已经在usedStations中，不需要额外检查
+        } while (randomStation && usedStations.has(randomStation)); // 确保randomStation已定义且检查是否在已使用站点中
         
-        if (!usedStations.has(randomStation)) {
+        if (randomStation && !usedStations.has(randomStation) && playerHand.length < actualCount) {
           playerHand.push(randomStation);
           usedStations.add(randomStation);
           console.log('添加随机站点到手牌:', randomStation);
@@ -1305,9 +1400,11 @@ function dealMetroCards(count) {
       console.warn('未找到有效路径，随机选择站点');
       
       // 如果没有找到有效路径，随机选择站点
-      const availableStations = stationNames.filter(station => !usedStations.has(station));
+      const availableStations = stationNames.filter(station => 
+        !usedStations.has(station) && station !== endStation
+      );
       
-      for (let i = 0; i < actualCount && availableStations.length > 0; i++) {
+      for (let i = 0; i < actualCount && availableStations.length > 0 && playerHand.length < actualCount; i++) {
         const randomIndex = Math.floor(Math.random() * availableStations.length);
         const selectedStation = availableStations[randomIndex];
         
@@ -1316,6 +1413,12 @@ function dealMetroCards(count) {
         // 从可用站点中移除已选择的站点
         availableStations.splice(randomIndex, 1);
       }
+    }
+    
+    // 确保手牌数量不超过限制
+    if (playerHand.length > actualCount) {
+      console.log(`手牌数量(${playerHand.length})超过限制(${actualCount})，进行裁剪`);
+      playerHand = playerHand.slice(0, actualCount);
     }
     
     // 随机打乱手牌顺序
@@ -1333,9 +1436,11 @@ function dealMetroCards(count) {
     showLoadingState(false);
     
     // 出错时随机选择站点
-    const availableStations = stationNames.filter(station => !usedStations.has(station));
+    const availableStations = stationNames.filter(station => 
+      !usedStations.has(station) && station !== endStation
+    );
     
-    for (let i = 0; i < actualCount && availableStations.length > 0; i++) {
+    for (let i = 0; i < actualCount && availableStations.length > 0 && playerHand.length < actualCount; i++) {
       const randomIndex = Math.floor(Math.random() * availableStations.length);
       const selectedStation = availableStations[randomIndex];
       
@@ -1343,6 +1448,12 @@ function dealMetroCards(count) {
       
       // 从可用站点中移除已选择的站点
       availableStations.splice(randomIndex, 1);
+    }
+    
+    // 确保手牌数量不超过限制
+    if (playerHand.length > actualCount) {
+      console.log(`手牌数量(${playerHand.length})超过限制(${actualCount})，进行裁剪`);
+      playerHand = playerHand.slice(0, actualCount);
     }
     
     // 随机打乱手牌顺序
@@ -1354,131 +1465,9 @@ function dealMetroCards(count) {
     renderPlayerHand();
   });
   
-  // 由于findPath现在是异步的，这里不再返回playerHand
-        
-    if (!usedStations.has(randomStation)) {
-          playerHand.push(randomStation);
-          usedStations.add(randomStation);
-          console.log('添加随机站点到手牌:', randomStation);
-        }
-
-    else {
-      // 如果没有找到合适的路径，尝试重新选择起点和终点站
-      let attempts = 1;
-      console.log(`第${attempts}次尝试未找到合适路径，重新选择站点`);
-      
-      if (attempts < 5) {
-        // 重新选择起点站和终点站
-        let newStartFound = false;
-        let newEndFound = false;
-        let maxSelectionAttempts = 20;
-        let selectionAttempt = 0;
-        
-        while (!newStartFound && selectionAttempt < maxSelectionAttempts) {
-          startStation = stationNames[Math.floor(Math.random() * stationNames.length)];
-          selectionAttempt++;
-          
-          // 确保新选择的起点站有足够的连接站点
-          const connections = getConnectedStations(startStation);
-          if (connections.length >= 3) {
-            newStartFound = true;
-          }
-        }
-        
-        selectionAttempt = 0;
-        while (!newEndFound && selectionAttempt < maxSelectionAttempts) {
-          endStation = stationNames[Math.floor(Math.random() * stationNames.length)];
-          selectionAttempt++;
-          
-          // 确保终点站不同于起点站，且不直接相连（或者如果直接相连，确保有其他可行路径）
-          if (endStation !== startStation) {
-            const directConnection = areStationsConnected(startStation, endStation);
-            if (!directConnection || getConnectedStations(startStation).length >= 3) {
-              newEndFound = true;
-            }
-          }
-        }
-        
-        // 更新UI显示
-        updateStationDisplay();
-        console.log(`重新选择站点：起点${startStation}，终点${endStation}`);
-        
-        // 重置已使用站点集合
-        usedStations.clear();
-        usedStations.add(startStation);
-      }
-    }
-  
-  
-  // 如果多次尝试后仍未找到有效路径，随机发放牌
-  if (playerHand.length === 0) {
-    console.log('多次尝试后仍无法找到符合难度要求的路径，随机发放牌');
-    playerHand = [];
-    
-    // 确保至少有一个可行的中间站点
-    const startConnections = getConnectedStations(startStation);
-    let middleStation = null;
-    
-    // 尝试找到一个可以连接起点和终点的中间站点
-    for (const connection of startConnections) {
-      if (connection !== endStation && areStationsConnected(connection, endStation)) {
-        middleStation = connection;
-        break;
-      }
-    }
-    
-    // 如果找到了中间站点，添加到手牌中
-    if (middleStation) {
-      playerHand.push(middleStation);
-      usedStations.add(middleStation);
-      console.log('添加中间站点到手牌:', middleStation);
-    }
-    
-    // 添加剩余随机站点
-    const remainingCount = middleStation ? actualCount - 1 : actualCount;
-    console.log('需要添加的随机站点数量:', remainingCount);
-    
-    for (let i = 0; i < remainingCount; i++) {
-      let randomStation;
-      let attempts = 0;
-      const maxAttempts = 30;
-      
-      do {
-        randomStation = stationNames[Math.floor(Math.random() * stationNames.length)];
-        attempts++;
-        if (attempts > maxAttempts) break;
-      } while (usedStations.has(randomStation) || randomStation === endStation);
-      
-      if (!usedStations.has(randomStation)) {
-        playerHand.push(randomStation);
-        usedStations.add(randomStation);
-        console.log('添加随机站点到手牌:', randomStation);
-      }
-    }
-  }
-  
-  // 随机打乱手牌顺序
-  shuffleArray(playerHand);
-  console.log('最终发放的地铁牌数量:', playerHand.length);
-  console.log('最终发放的地铁牌:', playerHand);
-  
-  // 确保手牌数量正确
-  if (playerHand.length === 0) {
-    console.error('警告：发放的地铁牌数量为0，可能存在问题！');
-    // 紧急情况下，随机发放一些牌
-    for (let i = 0; i < actualCount; i++) {
-      const randomIndex = Math.floor(Math.random() * stationNames.length);
-      const randomStation = stationNames[randomIndex];
-      // 确保不选择终点站
-      if (randomStation !== endStation && !usedStations.has(randomStation)) {
-        playerHand.push(randomStation);
-        usedStations.add(randomStation);
-      }
-    }
-    console.log('紧急修复：随机发放了地铁牌，数量:', playerHand.length);
-  }
-  
-  return playerHand;
+  // 如果异步操作完成前需要返回一个值，返回空数组
+  // 实际的手牌将在异步操作完成后通过renderPlayerHand()显示
+  return [];
 }
 
 // 更新起点站和终点站显示
@@ -1523,33 +1512,47 @@ function updateStationDisplay() {
     console.log('已更新起点站显示:', startStation);
   }
   
-  if (endStationElement) {
-    // 清空原有内容
-    endStationElement.innerHTML = '';
+  // 确保能找到终点站元素
+  if (!endStationElement) {
+    console.error('无法找到终点站元素，尝试重新获取');
+    // 再次尝试获取终点站元素
+    endStationElement = isCreatorMode ? document.getElementById('creator-end-station') : document.getElementById('end-station');
     
-    // 添加站名
-    const stationNameSpan = document.createElement('span');
-    stationNameSpan.textContent = endStation;
-    endStationElement.appendChild(stationNameSpan);
-    
-    // 添加线路信息 - 使用弹性布局
-    const flexLineContainer = document.createElement('div');
-    flexLineContainer.className = 'flex-line-container';
-    endStationElement.appendChild(flexLineContainer);
-    
-    // 查找终点站对象并添加线路信息
-    const endStationObj = metroData.stations.find(s => s.name === endStation);
-    const endLines = endStationObj ? endStationObj.lines : [];
-    endLines.forEach(line => {
-      const lineTag = document.createElement('span');
-      const lineClass = getLineClassName(line);
-      lineTag.className = `card-line-badge line-${lineClass}`;
-      lineTag.textContent = getLineNameById(line);
-      
-      flexLineContainer.appendChild(lineTag);
-    });
-    console.log('已更新终点站显示:', endStation);
+    if (!endStationElement) {
+      console.error('仍然无法找到终点站元素，游戏模式:', isCreatorMode ? '出题版' : '普通');
+      console.error('当前终点站值:', endStation);
+      return; // 如果仍然找不到，则退出函数
+    }
   }
+  
+  // 清空原有内容
+  endStationElement.innerHTML = '';
+  
+  // 添加站名
+  const stationNameSpan = document.createElement('span');
+  stationNameSpan.textContent = endStation;
+  endStationElement.appendChild(stationNameSpan);
+  
+  // 添加线路信息 - 使用弹性布局
+  const flexLineContainer = document.createElement('div');
+  flexLineContainer.className = 'flex-line-container';
+  endStationElement.appendChild(flexLineContainer);
+  
+  // 查找终点站对象并添加线路信息
+  const endStationObj = metroData.stations.find(s => s.name === endStation);
+  const endLines = endStationObj ? endStationObj.lines : [];
+  endLines.forEach(line => {
+    const lineTag = document.createElement('span');
+    const lineClass = getLineClassName(line);
+    lineTag.className = `card-line-badge line-${lineClass}`;
+    lineTag.textContent = getLineNameById(line);
+    
+    flexLineContainer.appendChild(lineTag);
+  });
+  console.log('已更新终点站显示:', endStation, '元素ID:', endStationElement.id);
+  
+  // 确保终点站元素可见
+  endStationElement.style.display = 'block';
   
   // 更新当前路径显示
   if (currentPathElement && currentPath.length > 0) {
@@ -1826,8 +1829,24 @@ function showStationSelectionUI() {
         
         console.log('设置起点站和终点站成功:', startStation, endStation);
         
+        // 获取当前游戏模式
+        const gameModeSelect = document.getElementById('game-mode');
+        const isCreatorMode = gameModeSelect && gameModeSelect.value === 'solo-exploration-creator';
+        
+        // 确保终点站元素存在并可见
+        const endStationElement = isCreatorMode ? document.getElementById('creator-end-station') : document.getElementById('end-station');
+        if (endStationElement) {
+          endStationElement.style.display = 'block';
+        } else {
+          console.error('无法找到终点站元素');
+        }
+        
         // 更新显示
         updateStationDisplay();
+        
+        // 调试信息：确认终点站是否正确设置
+        console.log('确认按钮点击后 - 终点站:', endStation);
+        console.log('终点站元素:', document.getElementById('creator-end-station') || document.getElementById('end-station'));
         
         // 发放地铁牌
         dealMetroCards(10);
@@ -2259,8 +2278,22 @@ function startGame() {
     console.log('在游戏开始后重新渲染玩家手牌');
     renderPlayerHand();
     
+    // 确保终点站显示正确
+    console.log('游戏开始时 - 起点站:', startStation, '终点站:', endStation);
+    
+    // 再次更新站点显示，确保终点站正确显示
+    updateStationDisplay();
+    
     // 显示成功消息
     showResultMessage(`游戏开始！从${startStation}到${endStation}`, 'correct');
+    
+    // 验证终点站元素是否正确显示
+    const endStationElement = document.getElementById('end-station');
+    if (endStationElement) {
+      console.log('终点站元素内容:', endStationElement.innerHTML);
+    } else {
+      console.error('无法找到终点站元素');
+    }
   } else if (selectedMode === 'solo-exploration-creator') {
     console.log('初始化单人漫游（出题版）模式');
     // 显示单人漫游出题版UI
@@ -2458,107 +2491,71 @@ function initGameEvents() {
     
     if (selectedMode === 'solo-exploration' || selectedMode === 'solo-exploration-creator') {
       // 清空当前路径和玩家手牌，准备下一题
-      if (nextBtn.textContent === '重新开始' || nextBtn.textContent === '下一题') {
-        console.log('准备下一题...');
-        // 清空当前路径
-        currentPath = [];
-        // 清空玩家手牌
-        playerHand = [];
-        // 重新渲染路径和手牌
-        updatePathDisplay();
-        renderPlayerHand();
-        
-        // 保存当前游戏状态
-        const wasGameStarted = gameStarted;
-        const currentScore = playerScore;
-        const currentTime = remainingTime;
-        const currentHintCount = hintCount;
-        
-        // 无论是什么模式，都重置起点终点站
-        startStation = null;
-        endStation = null;
-        
-        if (selectedMode === 'solo-exploration') {
-          // 普通模式：重新生成题目
-          console.log('普通模式：重新生成题目');
-          initSoloExplorationNextQuestion(false);
-        } else {
-          // 出题版模式：重新选择站点
-          console.log('出题版模式：重置站点选择');
-          initSoloExplorationNextQuestion(true);
-        }
-        
-        // 恢复游戏状态
-        gameStarted = wasGameStarted;
-        playerScore = currentScore;
-        remainingTime = currentTime;
-        hintCount = currentHintCount;
-        
-        // 更新UI显示
-        document.getElementById('score').textContent = playerScore;
-        updateTimerDisplay();
-        
-        // 发放新的地铁牌
-        console.log('发放新的地铁牌...');
-        dealMetroCards(10);
-        
-        // 确保玩家手牌区域是可见的
-        const playerHandElement = selectedMode === 'solo-exploration-creator' ? 
-          document.getElementById('creator-player-hand') : document.getElementById('player-hand');
-        if (playerHandElement) {
-          playerHandElement.style.display = 'flex';
-          console.log('设置玩家手牌区域为可见:', playerHandElement.id);
-        }
-        
-        // 渲染新的手牌
-        console.log('渲染新的手牌...');
-        renderPlayerHand();
-        
-        // 更新提示按钮
-        const hintBtn = document.getElementById('hint-btn');
-        if (hintBtn) {
-          hintBtn.textContent = `提示 (${hintCount})`;
-          hintBtn.disabled = hintCount <= 0;
-        }
-        
-        // 确保下一题按钮文本正确设置为"验证"
-        nextBtn.textContent = '验证';
-        nextBtn.disabled = false;
-      } else if (nextBtn.textContent === '验证') {
-        // 验证路径是否有效
-        if (currentPath.length === 0) {
-          // 如果没有选择任何卡牌，提示用户选择
-          showResultMessage('请选择至少一张地铁牌来构建路径', 'incorrect');
-        } else if (!currentPath.includes(endStation)) {
-          // 如果路径不完整，检查是否可以到达终点站
-          const lastStation = currentPath[currentPath.length - 1];
-          if (areStationsConnected(lastStation, endStation)) {
-            // 如果可以到达终点站，添加到路径并更新显示
-            currentPath.push(endStation);
-            updatePathDisplay();
-            
-            // 增加得分
-            playerScore += 10;
-            document.getElementById('score').textContent = playerScore;
-            
-            // 显示成功消息并更改按钮文本
-            showResultMessage('恭喜！你已成功到达终点站！点击"下一题"继续游戏', 'correct');
-            nextBtn.textContent = '下一题';
-          } else {
-            // 如果不能到达终点站，提示用户继续选择
-            showResultMessage(`当前路径无法直接到达${endStation}，请继续选择地铁牌`, 'incorrect');
-          }
-        } else {
-          // 路径已包含终点站，可以进入下一题
-          nextBtn.textContent = '下一题';
-          showResultMessage('路径已完成！点击"下一题"继续游戏', 'correct');
-        }
+      console.log('准备下一题...');
+      // 清空当前路径
+      currentPath = [];
+      // 清空玩家手牌
+      playerHand = [];
+      // 重新渲染路径和手牌
+      updatePathDisplay();
+      renderPlayerHand();
+      
+      // 保存当前游戏状态
+      const wasGameStarted = gameStarted;
+      const currentScore = playerScore;
+      const currentTime = remainingTime;
+      const currentHintCount = hintCount;
+      
+      // 无论是什么模式，都重置起点终点站
+      startStation = null;
+      endStation = null;
+      
+      if (selectedMode === 'solo-exploration') {
+        // 普通模式：重新生成题目
+        console.log('普通模式：重新生成题目');
+        initSoloExplorationNextQuestion(false);
       } else {
-        // 其他情况（如按钮文本为其他值）
-        // 重置为下一题
-        nextBtn.textContent = '下一题';
-        showResultMessage('可以点击"下一题"按钮进入新的题目', 'correct');
+        // 出题版模式：重新选择站点
+        console.log('出题版模式：重置站点选择');
+        initSoloExplorationNextQuestion(true);
       }
+      
+      // 恢复游戏状态
+      gameStarted = wasGameStarted;
+      playerScore = currentScore;
+      remainingTime = currentTime;
+      hintCount = currentHintCount;
+      
+      // 更新UI显示
+      document.getElementById('score').textContent = playerScore;
+      updateTimerDisplay();
+      
+      // 发放新的地铁牌
+      console.log('发放新的地铁牌...');
+      dealMetroCards(10);
+      
+      // 确保玩家手牌区域是可见的
+      const playerHandElement = selectedMode === 'solo-exploration-creator' ? 
+        document.getElementById('creator-player-hand') : document.getElementById('player-hand');
+      if (playerHandElement) {
+        playerHandElement.style.display = 'flex';
+        console.log('设置玩家手牌区域为可见:', playerHandElement.id);
+      }
+      
+      // 渲染新的手牌
+      console.log('渲染新的手牌...');
+      renderPlayerHand();
+      
+      // 更新提示按钮
+      const hintBtn = document.getElementById('hint-btn');
+      if (hintBtn) {
+        hintBtn.textContent = `提示 (${hintCount})`;
+        hintBtn.disabled = hintCount <= 0;
+      }
+      
+      // 确保下一题按钮文本始终为"下一题"且可点击
+      nextBtn.textContent = '下一题';
+      nextBtn.disabled = false;
     }
     // 其他模式的处理逻辑...
   });

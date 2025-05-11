@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北京地铁漫游游戏 - 主入口</title>
+  <link rel="stylesheet" href="metro_styles.css">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    h1 {
+      color: #0078d7;
+      font-size: 32px;
+      margin-bottom: 15px;
+    }
+    
+    .game-description {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #555;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    
+    .game-modes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+    
+    .game-mode-card {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 25px;
+      text-align: center;
+      transition: transform 0.3s, box-shadow 0.3s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .game-mode-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .game-mode-card h2 {
+      color: #0078d7;
+      font-size: 22px;
+      margin-bottom: 15px;
+    }
+    
+    .game-mode-card p {
+      color: #666;
+      margin-bottom: 20px;
+      flex-grow: 1;
+    }
+    
+    .game-mode-card .play-button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      width: 100%;
+    }
+    
+    .game-mode-card .play-button:hover {
+      background-color: #005a9e;
+    }
+    
+    .metro-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+      color: #0078d7;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      color: #888;
+      font-size: 14px;
+    }
+    
+    .back-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 8px 15px;
+      background-color: #f0f0f0;
+      color: #555;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    
+    .back-button:hover {
+      background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>北京地铁漫游游戏</h1>
+    </header>
+    
+    <div class="game-description">
+      <p>欢迎来到北京地铁漫游游戏！这是一款基于北京地铁线路的益智游戏，帮助您熟悉北京地铁网络，锻炼路线规划能力。</p>
+      <p>请选择下面的游戏模式开始您的地铁漫游之旅！</p>
+    </div>
+    
+    <div class="game-modes">
+      <div class="game-mode-card">
+        <div class="metro-icon">🚇</div>
+        <h2>单人漫游模式</h2>
+        <p>系统随机选择起点站和终点站，玩家需要从手中的地铁牌中选择正确的站点，按顺序连接起点和终点。</p>
+        <button class="play-button" onclick="window.location.href='index.html'">开始游戏</button>
+      </div>
+      
+      <div class="game-mode-card">
+        <div class="metro-icon">🗺️</div>
+        <h2>单人漫游出题版</h2>
+        <p>玩家可以自行选择起点站和终点站，系统会根据选择生成一条可行的路径。这种模式更具挑战性，适合熟悉北京地铁网络的玩家。</p>
+        <button class="play-button" onclick="window.location.href='solo_exploration_creator.html'">开始游戏</button>
+      </div>
+
+      <div class="game-mode-card">
+        <div class="metro-icon">🎮</div>
+        <h2>挑战模式</h2>
+        <p>在限定时间内完成尽可能多的路线规划，挑战你的北京地铁知识极限！每完成一条路线获得积分，看看你能达到什么水平。</p>
+        <button class="play-button" onclick="window.location.href='challenge_mode.html'">开始游戏</button>
+      </div>
+      
+      <div class="game-mode-card">
+        <div class="metro-icon">👥</div>
+        <h2>多人对战模式</h2>
+        <p>与朋友一起比赛，看谁能更快地完成地铁路线规划。支持2-4名玩家同时参与，增加游戏的竞争性和趣味性。</p>
+        <button class="play-button" disabled>即将推出</button>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>更多游戏模式即将推出，敬请期待！</p>
+      <a href="../index.html" class="back-button">返回小川数字迷宫</a>
+    </div>
+  </div>
+</body>
+</html>
