@@ -424,21 +424,26 @@ function updateStationDisplay(startStation, endStation, startElementId, endEleme
     // 清除之前的内容
     startElement.innerHTML = '';
     
+    // 创建站点标签容器
+    const stationContainer = document.createElement('div');
+    stationContainer.className = 'station-container';
+    startElement.appendChild(stationContainer);
+    
     // 创建站名元素
     const nameElement = document.createElement('div');
     nameElement.className = 'station-name-large';
     nameElement.textContent = startStation;
-    startElement.appendChild(nameElement);
+    stationContainer.appendChild(nameElement);
     
     // 创建线路信息容器
     const linesContainer = document.createElement('div');
     linesContainer.id = `${startElementId}-lines`;
-    linesContainer.className = 'station-lines';
-    startElement.appendChild(linesContainer);
+    linesContainer.className = 'station-lines station-lines-prominent';
+    stationContainer.appendChild(linesContainer);
     
     // 添加线路信息
     // 检查metroData是否已加载以及站点是否存在
-    if (window.metroData && window.metroData.stations) {
+    if (window.metroData && window.metroData.stations && window.metroData.lines) {
       const startStationInfo = window.metroData.stations.find(s => s.name === startStation);
       if (startStationInfo) {
         startStationInfo.lines.forEach(lineId => {
@@ -452,13 +457,24 @@ function updateStationDisplay(startStation, endStation, startElementId, endEleme
           // 查找线路名称
           const lineData = window.metroData.lines.find(l => l.id === lineId);
           if (lineData) {
-            lineSpan.textContent = lineData.name;
+            // 使用简短名称以节省空间
+            lineSpan.textContent = lineData.shortname || lineData.name;
+            // 添加完整名称作为提示
+            lineSpan.title = lineData.name;
           } else {
             lineSpan.textContent = `线路${lineId}`;
           }
           
           linesContainer.appendChild(lineSpan);
         });
+        
+        // 添加换乘站标记
+        if (startStationInfo.istransfer === 1) {
+          const transferBadge = document.createElement('div');
+          transferBadge.className = 'transfer-badge';
+          transferBadge.textContent = '换乘站';
+          stationContainer.appendChild(transferBadge);
+        }
       } else {
         console.warn(`无法找到起点站信息: ${startStation}`);
       }
@@ -471,21 +487,26 @@ function updateStationDisplay(startStation, endStation, startElementId, endEleme
     // 清除之前的内容
     endElement.innerHTML = '';
     
+    // 创建站点标签容器
+    const stationContainer = document.createElement('div');
+    stationContainer.className = 'station-container';
+    endElement.appendChild(stationContainer);
+    
     // 创建站名元素
     const nameElement = document.createElement('div');
     nameElement.className = 'station-name-large';
     nameElement.textContent = endStation;
-    endElement.appendChild(nameElement);
+    stationContainer.appendChild(nameElement);
     
     // 创建线路信息容器
     const linesContainer = document.createElement('div');
     linesContainer.id = `${endElementId}-lines`;
-    linesContainer.className = 'station-lines';
-    endElement.appendChild(linesContainer);
+    linesContainer.className = 'station-lines station-lines-prominent';
+    stationContainer.appendChild(linesContainer);
     
     // 添加线路信息
     // 检查metroData是否已加载以及站点是否存在
-    if (window.metroData && window.metroData.stations) {
+    if (window.metroData && window.metroData.stations && window.metroData.lines) {
       const endStationInfo = window.metroData.stations.find(s => s.name === endStation);
       if (endStationInfo) {
         endStationInfo.lines.forEach(lineId => {
@@ -499,13 +520,24 @@ function updateStationDisplay(startStation, endStation, startElementId, endEleme
           // 查找线路名称
           const lineData = window.metroData.lines.find(l => l.id === lineId);
           if (lineData) {
-            lineSpan.textContent = lineData.name;
+            // 使用简短名称以节省空间
+            lineSpan.textContent = lineData.shortname || lineData.name;
+            // 添加完整名称作为提示
+            lineSpan.title = lineData.name;
           } else {
             lineSpan.textContent = `线路${lineId}`;
           }
           
           linesContainer.appendChild(lineSpan);
         });
+        
+        // 添加换乘站标记
+        if (endStationInfo.istransfer === 1) {
+          const transferBadge = document.createElement('div');
+          transferBadge.className = 'transfer-badge';
+          transferBadge.textContent = '换乘站';
+          stationContainer.appendChild(transferBadge);
+        }
       } else {
         console.warn(`无法找到终点站信息: ${endStation}`);
       }
@@ -536,14 +568,14 @@ function updatePathDisplay(path, elementId) {
     return;
   }
   
-  // 创建横向路径容器
+  // 创建横向路径容器 - 使用更好的横向布局
   const horizontalPath = document.createElement('div');
-  horizontalPath.className = 'path-horizontal';
+  horizontalPath.className = 'path-horizontal full-width';
   
   // 创建路径元素
   path.forEach((station, index) => {
     const stationElement = document.createElement('div');
-    stationElement.className = 'path-station';
+    stationElement.className = 'path-station compact-station';
     
     // 站点名称
     const nameElement = document.createElement('span');
@@ -551,48 +583,63 @@ function updatePathDisplay(path, elementId) {
     nameElement.textContent = station;
     stationElement.appendChild(nameElement);
     
-    // 添加线路信息
+    // 添加线路信息 - 使用更紧凑的布局
     const stationInfo = window.metroData.stations.find(s => s.name === station);
     if (stationInfo) {
       const lineInfo = document.createElement('div');
-      lineInfo.className = 'station-lines';
+      lineInfo.className = 'station-lines compact-lines';
       
-      stationInfo.lines.forEach(lineId => {
+      // 限制显示的线路数量，如果线路太多，只显示前2个并添加+N标记
+      const maxLinesToShow = 2;
+      const linesToShow = stationInfo.lines.slice(0, maxLinesToShow);
+      const remainingLines = stationInfo.lines.length - maxLinesToShow;
+      
+      linesToShow.forEach(lineId => {
         const lineSpan = document.createElement('span');
         // 使用CSS类来设置线路颜色
-        const lineClass = getLineClassName(lineId);
-        lineSpan.className = `line-tag line-${lineClass}`;
+        const lineClass = typeof lineId === 'string' ? lineId : lineId.toString();
+        lineSpan.className = `line-tag compact-line-tag line-${lineClass}`;
         
-        // 获取线路名称
+        // 获取线路名称 - 使用简短名称
         const lineData = window.metroData.lines.find(l => l.id === lineId);
-        lineSpan.textContent = lineData ? lineData.name : `线路${lineId}`;
+        lineSpan.textContent = lineData ? lineData.shortname || lineData.name : `${lineId}`;
+        lineSpan.title = lineData ? lineData.name : `线路${lineId}`;
         
         lineInfo.appendChild(lineSpan);
       });
       
+      // 如果有更多线路，添加+N标记
+      if (remainingLines > 0) {
+        const moreLines = document.createElement('span');
+        moreLines.className = 'more-lines';
+        moreLines.textContent = `+${remainingLines}`;
+        lineInfo.appendChild(moreLines);
+      }
+      
       stationElement.appendChild(lineInfo);
       
-      // 添加换乘站标记
+      // 添加换乘站标记 - 使用更小的图标
       if (stationInfo.istransfer === 1) {
-        stationElement.classList.add('transfer-station');
+        stationElement.classList.add('transfer-station', 'compact-transfer');
       }
     }
     
     horizontalPath.appendChild(stationElement);
     
-    // 添加箭头（除了最后一个站点）
+    // 添加箭头（除了最后一个站点）- 使用更小的箭头
     if (index < path.length - 1) {
       const arrowElement = document.createElement('div');
-      arrowElement.className = 'path-arrow';
-      arrowElement.innerHTML = '&rarr;'; // 改为向右箭头
+      arrowElement.className = 'path-arrow compact-arrow';
+      arrowElement.innerHTML = '→';
       
       // 检查下一个站点是否是换乘站
       const nextStation = path[index + 1];
       const nextStationInfo = window.metroData.stations.find(s => s.name === nextStation);
       if (nextStationInfo && nextStationInfo.istransfer === 1) {
         const transferInfo = document.createElement('div');
-        transferInfo.className = 'transfer-info';
-        transferInfo.textContent = '换乘站';
+        transferInfo.className = 'transfer-info mini-transfer-info';
+        transferInfo.textContent = '换';
+        transferInfo.title = '换乘站';
         arrowElement.appendChild(transferInfo);
       }
       

@@ -20,6 +20,108 @@
   color: white;
 }
 
+/* 站点容器样式 */
+.station-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 5px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 突出显示线路信息 */
+.station-lines-prominent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 5px;
+  gap: 4px;
+}
+
+/* 换乘站标记 */
+.transfer-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #FF9800;
+  color: white;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+/* 横向路径样式优化 */
+.path-horizontal.full-width {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  width: 100%;
+  padding: 10px 5px;
+  align-items: center;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+/* 紧凑型站点样式 */
+.compact-station {
+  padding: 5px 8px;
+  margin: 0 2px;
+  min-width: auto;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* 紧凑型线路标签 */
+.compact-line-tag {
+  font-size: 10px;
+  padding: 1px 3px;
+  margin: 1px;
+}
+
+/* 紧凑型线路容器 */
+.compact-lines {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+/* 更多线路标记 */
+.more-lines {
+  font-size: 9px;
+  background-color: #888;
+  color: white;
+  padding: 1px 3px;
+  border-radius: 3px;
+  margin-left: 2px;
+}
+
+/* 紧凑型箭头 */
+.compact-arrow {
+  font-size: 14px;
+  margin: 0 2px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* 迷你换乘信息 */
+.mini-transfer-info {
+  font-size: 9px;
+  background-color: #FF9800;
+  color: white;
+  padding: 1px 3px;
+  border-radius: 3px;
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* 迷你终点标记 */
 .mini-end-label {
   background-color: #F44336;

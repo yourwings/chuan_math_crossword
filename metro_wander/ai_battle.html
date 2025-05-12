@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>北京地铁漫游 - AI对战模式</title>
+  <link rel="stylesheet" href="metro_styles.css">
+  <style>
+    .game-container {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .game-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      flex-wrap: wrap;
+    }
+
+    .game-info div {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .card-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .table-cards {
+      min-height: 120px;
+      padding: 10px;
+      background-color: #e8f4fc;
+      border-radius: 8px;
+      border: 2px dashed #0078d7;
+    }
+
+    .player-hand, .ai-hand {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      min-height: 100px;
+    }
+
+    .ai-hand {
+      background-color: #f5e8e8;
+    }
+
+    .card {
+      width: 80px;
+      height: 120px;
+      background-color: white;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card.selected {
+      border: 2px solid #0078d7;
+      box-shadow: 0 0 10px rgba(0, 120, 215, 0.5);
+    }
+
+    .card.function-card {
+      background-color: #ffe8cc;
+    }
+
+    .card.taxi {
+      background-color: #fff2cc;
+    }
+
+    .card.bus {
+      background-color: #e6f2ff;
+    }
+
+    .card-back {
+      background-color: #d4ebf2;
+      background-image: linear-gradient(45deg, #b8e0ed 25%, transparent 25%, transparent 75%, #b8e0ed 75%, #b8e0ed),
+                        linear-gradient(45deg, #b8e0ed 25%, transparent 25%, transparent 75%, #b8e0ed 75%, #b8e0ed);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+    }
+
+    .station-name {
+      font-weight: bold;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .station-lines {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .line-tag {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .function-icon {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .action-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .action-button {
+      padding: 8px 15px;
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .action-button:hover {
+      background-color: #005a9e;
+    }
+
+    .action-button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .game-message {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #e8f4fc;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .game-result {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .game-result h2 {
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    .game-result.win {
+      background-color: #d4edda;
+      border: 2px solid #155724;
+    }
+
+    .game-result.win h2 {
+      color: #155724;
+    }
+
+    .game-result.lose {
+      background-color: #f8d7da;
+      border: 2px solid #721c24;
+    }
+
+    .game-result.lose h2 {
+      color: #721c24;
+    }
+    
+    .game-stats {
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 15px;
+      border-radius: 5px;
+      margin: 15px 0;
+      text-align: left;
+    }
+    
+    .game-stats h3 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    
+    .hidden-cards-info {
+      background-color: #f0f0f0;
+      padding: 5px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    .debug-info {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.95);
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      width: 250px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .debug-info h3 {
+      margin-top: 0;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+    }
+    
+    .debug-info h4 {
+      margin: 10px 0 5px;
+      color: #0078d7;
+    }
+    
+    #debug-content {
+      font-size: 14px;
+    }
+    
+    #debug-content ul {
+      margin: 5px 0;
+      padding-left: 20px;
+    }
+    
+    #debug-content p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>北京地铁漫游 - AI对战模式</h1>
+      <p>与AI对战，看谁先出完手中的牌！</p>
+      <a href="index.html" class="back-link">返回主页</a>
+    </header>
+
+    <div class="game-container">
+      <div class="game-info">
+        <div id="player-cards-count">玩家手牌: 8</div>
+        <div id="ai-cards-count">AI手牌: 8</div>
+        <div id="deck-count">牌堆剩余: 0</div>
+        <div id="current-turn">当前回合: 玩家</div>
+      </div>
+
+      <div class="game-message" id="game-message">游戏开始！请选择一种出牌方式</div>
+
+      <div class="card-area">
+        <h3>桌面牌</h3>
+        <div class="table-cards" id="table-cards">
+          <!-- 桌面牌将在这里显示 -->
+        </div>
+
+        <h3>AI手牌</h3>
+        <div class="ai-hand" id="ai-hand">
+          <!-- AI手牌将在这里显示 -->
+        </div>
+
+        <h3>玩家手牌</h3>
+        <div class="player-hand" id="player-hand">
+          <!-- 玩家手牌将在这里显示 -->
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button id="play-metro-btn" class="action-button">坐地铁</button>
+        <button id="play-taxi-btn" class="action-button">乘出租</button>
+        <button id="play-bus-btn" class="action-button">坐公交</button>
+        <button id="draw-card-btn" class="action-button">摸牌</button>
+        <button id="cancel-selection-btn" class="action-button">取消选择</button>
+      </div>
+
+      <div class="game-result" id="game-result" style="display: none;"></div>
+
+      <div class="action-buttons">
+        <button id="new-game-btn" class="action-button">开始新游戏</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="ai_battle.js"></script>
+</body>
+</html>

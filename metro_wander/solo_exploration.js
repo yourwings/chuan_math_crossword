@@ -237,12 +237,21 @@ function handleCardClick(stationName) {
   
   // 检查是否可以添加到路径中
   if (currentPath.length === 0) {
-    // 第一张牌可以直接添加
-    // 先添加起点站，再添加当前选择的站点（如果不是起点站）
-    if (stationName !== startStation) {
+    // 第一张牌需要检查与起点站的连通性
+    if (stationName === startStation) {
+      // 如果选择的就是起点站，直接添加
+      currentPath.push(stationName);
+    } else {
+      // 检查选择的站点是否与起点站相连
+      if (!areStationsConnected(startStation, stationName)) {
+        console.log('首个站点与起点站不相连');
+        alert('该站点与起点站不相连！');
+        return;
+      }
+      // 先添加起点站，再添加当前选择的站点
       currentPath.push(startStation);
+      currentPath.push(stationName);
     }
-    currentPath.push(stationName);
   } else {
     // 检查是否与路径中最后一个站点相连
     const lastStation = currentPath[currentPath.length - 1];

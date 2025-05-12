@@ -70,6 +70,7 @@ function initChallengeMode() {
   const challengeTimeSelect = document.getElementById('challenge-time');
   remainingTime = challengeTimeSelect ? parseInt(challengeTimeSelect.value) : 300;
   if (timerElement) timerElement.textContent = `时间: ${formatTime(remainingTime)}`;
+  console.log('设置挑战时间:', remainingTime, '秒');
   
   // 清除之前的计时器
   if (timerInterval) {
@@ -181,6 +182,13 @@ async function startChallenge() {
     
     startStationElement.classList.add('station-with-lines');
     endStationElement.classList.add('station-with-lines');
+  }
+  
+  // 获取用户选择的挑战时间
+  //const challengeTimeSelect = document.getElementById('challenge-time');
+  if (challengeTimeSelect) {
+    remainingTime = parseInt(challengeTimeSelect.value);
+    console.log('用户选择的挑战时间:', remainingTime, '秒');
   }
   
   // 开始计时
