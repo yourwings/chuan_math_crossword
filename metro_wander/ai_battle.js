@@ -98,7 +98,11 @@ debugBtn.addEventListener('click', () => {
   debugMode = !debugMode;
   debugBtn.textContent = debugMode ? '关闭调试' : '调试模式';
   debugInfoElement.style.display = debugMode ? 'block' : 'none';
-  renderCards(); // 重新渲染卡牌以显示或隐藏AI手牌
+  // 显示或隐藏AI手牌区域
+  aiHandElement.style.display = debugMode ? 'flex' : 'none';
+  // 更新调试信息
+  updateDebugInfo();
+  renderCards(); // 重新渲染卡牌
 });
 
 // 初始化游戏
@@ -120,6 +124,10 @@ function initializeGame() {
   currentTurn = 'player';
   gameOver = false;
   
+  // 重置出牌次数标记
+  window.metroCardPlayed = false;
+  window.specialEffectPlayed = false;
+  
   // 重置游戏统计数据
   gameStats = {
     totalCards: 0,
@@ -131,6 +139,9 @@ function initializeGame() {
   // 隐藏游戏结果
   gameResultElement.style.display = 'none';
   
+  // 设置AI手牌区域可见性
+  aiHandElement.style.display = debugMode ? 'flex' : 'none';
+  
   // 初始化牌组
   initializeCards();
   
@@ -138,6 +149,11 @@ function initializeGame() {
   updateGameInfo();
   renderCards();
   updateButtonStates();
+  
+  // 如果处于调试模式，更新调试信息
+  if (debugMode) {
+    updateDebugInfo();
+  }
   
   // 显示游戏开始消息
   showGameMessage('游戏开始！请选择一种出牌方式');
@@ -239,6 +255,8 @@ function handlePlayMode(mode) {
     if ((mode === 'metro' && selectedCardType === CARD_TYPE.STATION) ||
         (mode === 'taxi' && selectedCardType === CARD_TYPE.TAXI) ||
         (mode === 'bus' && selectedCardType === CARD_TYPE.BUS)) {
+      // 设置出牌模式
+      playMode = mode;
       handlePlayerPlay();
       return;
     }
@@ -335,12 +353,21 @@ function handlePlayerPlay() {
   let effectMessage = '';
   let specialAction = false;
   
-  if (playMode === 'taxi') {
+  // 根据出牌模式设置特殊效果
+  if (playMode === 'metro') {
+    // 地铁牌特殊效果：可以连续出两张地铁牌
+    effectMessage = '可以选择打出第二张地铁站牌';
+    specialAction = true;
+    console.log('地铁牌特殊效果已触发，specialAction =', specialAction);
+  } else if (playMode === 'taxi') {
     // 出租车牌特殊效果：出牌后摸一张牌并可选择打出一张地铁牌
     effectMessage = '出租车可以连接任意两个地铁站！摸一张牌后可以选择打出一张地铁牌';
     specialAction = true;
+    // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
+    window.specialEffectPlayed = true;
+    console.log('出租车特殊效果已触发，specialAction =', specialAction);
   } else if (playMode === 'bus') {
-    // 公交车牌特殊效果：将倒数第二张地铁牌放到牌堆顶
+    // 公交车牌特殊效果：将倒数第二张地铁牌放到牌堆末尾
     // 首先检查是否有足够的地铁站牌在桌面上
     const stationCards = tableCards.filter(card => card.type === CARD_TYPE.STATION);
     if (stationCards.length >= 2) {
@@ -352,12 +379,16 @@ function handlePlayerPlay() {
       });
       
       if (secondLastStationIndex !== -1) {
-        // 将倒数第二张地铁站牌移到牌堆顶
+        // 将倒数第二张地铁站牌移到牌堆末尾（而不是牌堆首位）
         const secondLastStation = tableCards[secondLastStationIndex];
         tableCards.splice(secondLastStationIndex, 1);
+        // 将地铁站牌放到末尾，而不是首位
         tableCards.push(secondLastStation);
-        effectMessage = `公交车将${secondLastStation.name}站移到了牌堆顶！可以选择打出一张地铁牌`;
+        effectMessage = `公交车将${secondLastStation.name}站移到了牌堆末尾！可以选择打出一张地铁牌`;
         specialAction = true; // 公交车也设置为特殊行动，允许继续出一张地铁牌
+        console.log('公交车特殊效果已触发，specialAction =', specialAction);
+        // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
+        window.specialEffectPlayed = true;
       } else {
         effectMessage = '公交车效果：无法找到倒数第二张地铁站牌';
       }
@@ -365,6 +396,27 @@ function handlePlayerPlay() {
       effectMessage = '公交车效果：桌面上没有足够的地铁站牌';
     }
   }
+  
+  // 检查是否是特殊效果后的出牌（只能出一张）
+  let isSpecialEffectPlay = false;
+  if (window.specialEffectPlayed && playMode === 'metro') {
+    // 标记这是特殊效果后的出牌
+    isSpecialEffectPlay = true;
+    // 重置特殊效果标记
+    window.specialEffectPlayed = false;
+    specialAction = false;
+    
+    // 移除所有可能存在的结束回合按钮
+    const existingEndTurnBtn = document.getElementById('end-turn-btn');
+    if (existingEndTurnBtn) {
+      existingEndTurnBtn.remove();
+    }
+    
+    console.log('特殊效果后出地铁牌');
+  }
+  
+  // 调试输出
+  console.log('出牌模式:', playMode, '特殊行动状态:', specialAction);
   
   // 将牌放到桌面上（累积而不是替换）
   tableCards = [...tableCards, ...cardsToPlay];
@@ -402,6 +454,8 @@ function handlePlayerPlay() {
   
   // 处理特殊效果：出租车或公交车后可以选择打出一张地铁牌
   if (specialAction) {
+    console.log('进入特殊行动处理流程');
+    
     // 如果是出租车，先摸一张牌
     if (playMode === 'taxi') {
       // 摸一张牌
@@ -410,10 +464,16 @@ function handlePlayerPlay() {
       renderCards();
       updateGameInfo();
       showGameMessage(`摸了一张${newCard.type === CARD_TYPE.STATION ? '地铁站' : newCard.type === CARD_TYPE.TAXI ? '出租车' : '公交车'}牌，可以选择打出一张地铁站牌或结束回合`);
+      console.log('出租车效果：摸了一张牌', newCard);
     } else if (playMode === 'bus') {
       // 公交车效果已经在前面处理过了
       showGameMessage('公交车效果已生效，可以选择打出一张地铁站牌或结束回合');
+      console.log('公交车效果已处理完毕');
     }
+    
+    // 移除所有可能已存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
     
     // 创建结束回合按钮
     const endTurnBtn = document.createElement('button');
@@ -421,11 +481,16 @@ function handlePlayerPlay() {
     endTurnBtn.className = 'action-button';
     endTurnBtn.textContent = '结束回合';
     document.querySelector('.action-buttons').appendChild(endTurnBtn);
+    console.log('创建了结束回合按钮');
     
     // 添加结束回合按钮点击事件
     endTurnBtn.addEventListener('click', () => {
       // 移除结束回合按钮
       endTurnBtn.remove();
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      window.specialEffectPlayed = false;
       
       // 切换到AI回合
       currentTurn = 'ai';
@@ -436,14 +501,70 @@ function handlePlayerPlay() {
       setTimeout(handleAITurn, 1500);
     });
     
-    // 设置出牌模式为地铁
+    // 设置出牌模式为地铁，并标记这是特殊效果后的出牌（只能出一张）
     playMode = 'metro';
+    // 添加一个标记，表示这是特殊效果后的出牌，只能出一张
+    window.specialEffectPlayed = true;
+    // 修改提示信息，明确告知玩家只能出一张地铁牌
+    showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
     updateButtonStates();
+    return;
+  } else {
+    console.log('未触发特殊行动处理流程');
+  }
+  
+  // 如果是特殊效果后出的地铁牌，直接结束回合
+  if (isSpecialEffectPlay) {
+    console.log('特殊效果后出完地铁牌，自动结束回合');
+    
+    // 移除所有可能存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
+    // 重置标记
+    window.metroCardPlayed = false;
+    
+    // 切换到AI回合
+    currentTurn = 'ai';
+    updateGameInfo();
+    showGameMessage('特殊效果后出完地铁牌，自动结束回合。AI回合...');
+    
+    // AI延迟出牌
+    setTimeout(handleAITurn, 1500);
     return;
   }
   
   // 如果是地铁牌，允许玩家选择出第二张地铁牌或结束回合
   if (playMode === 'metro') {
+    // 检查是否已经出过一张地铁牌（第二次出牌）
+    if (window.metroCardPlayed) {
+      // 如果已经出过一张地铁牌，直接结束回合
+      console.log('已经出过一张地铁牌，自动结束回合');
+      
+      // 移除所有可能存在的结束回合按钮
+      const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+      allEndTurnBtns.forEach(btn => btn.remove());
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      
+      // 切换到AI回合
+      currentTurn = 'ai';
+      updateGameInfo();
+      showGameMessage('已出过地铁牌，自动结束回合。AI回合...');
+      
+      // AI延迟出牌
+      setTimeout(handleAITurn, 1500);
+      return;
+    }
+    
+    // 标记已经出过一张地铁牌
+    window.metroCardPlayed = true;
+    
+    // 移除所有可能存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
     // 创建结束回合按钮
     const endTurnBtn = document.createElement('button');
     endTurnBtn.id = 'end-turn-btn';
@@ -455,6 +576,10 @@ function handlePlayerPlay() {
     endTurnBtn.addEventListener('click', () => {
       // 移除结束回合按钮
       endTurnBtn.remove();
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      window.specialEffectPlayed = false;
       
       // 切换到AI回合
       currentTurn = 'ai';
@@ -533,8 +658,13 @@ function handleAITurn() {
   }
   
   // 处理特殊牌效果
+  let aiSpecialAction = false;
+  
   // 如果AI出了出租车牌，可以摸一张牌并选择出一张地铁站牌
   if (aiDecision.action === 'play' && aiDecision.mode === 'taxi') {
+    aiSpecialAction = true;
+    console.log('AI出租车特殊效果触发');
+    
     // AI摸一张牌
     const newCard = drawCard('ai');
     aiHand.push(newCard);
@@ -571,12 +701,23 @@ function handleAITurn() {
         showGameMessage(`AI因出租车效果出了一张地铁站牌：${cardToPlay.name}`);
         gameStats.metroStations += 1;
         gameStats.totalCards += 1;
+        console.log('AI出租车效果：出了一张地铁站牌', cardToPlay.name);
+        
+        // 出租车效果后只能出一张地铁牌，不能继续出牌
+        aiSpecialAction = false;
+      } else {
+        console.log('AI没有可出的连通地铁站牌');
       }
+    } else {
+      console.log('AI手牌中没有地铁站牌');
     }
   }
   
-  // 如果AI出了公交车牌，将倒数第二张地铁牌放到牌堆顶
+  // 如果AI出了公交车牌，将倒数第二张地铁牌放到牌堆末尾
   if (aiDecision.action === 'play' && aiDecision.mode === 'bus') {
+    aiSpecialAction = true;
+    console.log('AI公交车特殊效果触发');
+    
     const stationCards = tableCards.filter(card => card.type === CARD_TYPE.STATION);
     if (stationCards.length >= 2) {
       // 找到倒数第二张地铁站牌
@@ -587,14 +728,64 @@ function handleAITurn() {
       });
       
       if (secondLastStationIndex !== -1) {
-        // 将倒数第二张地铁站牌移到牌堆顶
+        // 将倒数第二张地铁站牌移到牌堆末尾（而不是牌堆首位）
         const secondLastStation = tableCards[secondLastStationIndex];
         tableCards.splice(secondLastStationIndex, 1);
+        // 将地铁站牌放到末尾，而不是首位
         tableCards.push(secondLastStation);
-        showGameMessage(`AI使用公交车将${secondLastStation.name}站移到了牌堆顶！`);
+        showGameMessage(`AI使用公交车将${secondLastStation.name}站移到了牌堆末尾！`);
+        console.log('AI公交车效果：移动了地铁站牌', secondLastStation.name);
+        
+        // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
+        window.specialEffectPlayed = true;
+        
+        // AI可能会选择出一张地铁站牌
+        const stationCards = aiHand.filter(card => card.type === CARD_TYPE.STATION);
+        if (stationCards.length > 0) {
+          // 检查是否有连通的地铁站牌
+          // 现在应该检查与末尾牌的连通性，因为地铁站牌已经移到末尾
+          const lastTableCard = tableCards[tableCards.length - 1];
+          const connectedStationCards = stationCards.filter(card => {
+            if (lastTableCard.type !== CARD_TYPE.STATION) return true;
+            
+            const lastCardStation = metroData.stations.find(s => s.name === lastTableCard.name);
+            const newCardStation = metroData.stations.find(s => s.name === card.name);
+            
+            if (!lastCardStation || !newCardStation) return false;
+            
+            // 检查是否有共同线路
+            return lastCardStation.lines.some(line => newCardStation.lines.includes(line));
+          });
+          
+          if (connectedStationCards.length > 0) {
+            // AI选择出一张连通的地铁站牌
+            const cardToPlay = connectedStationCards[0];
+            tableCards.push(cardToPlay);
+            
+            // 从AI手牌中移除
+            const index = aiHand.findIndex(c => c === cardToPlay);
+            if (index !== -1) {
+              aiHand.splice(index, 1);
+            }
+            
+            showGameMessage(`AI因公交车效果出了一张地铁站牌：${cardToPlay.name}`);
+            gameStats.metroStations += 1;
+            gameStats.totalCards += 1;
+            console.log('AI公交车效果：出了一张地铁站牌', cardToPlay.name);
+            
+            // 公交车效果后只能出一张地铁牌，不能继续出牌
+            aiSpecialAction = false;
+          }
+        }
+      } else {
+        console.log('找不到倒数第二张地铁站牌');
       }
+    } else {
+      console.log('桌面上没有足够的地铁站牌');
     }
   }
+  
+  console.log('AI特殊行动状态:', aiSpecialAction);
   
   // 更新UI
   renderCards();
@@ -747,6 +938,16 @@ function isValidPlay(cards, mode) {
     
     // 如果是地铁站牌，检查连通性
     if (cardType === CARD_TYPE.STATION && tableCards.length > 0) {
+      // 检查是否是出租车特殊效果后的出牌
+      if (window.specialEffectPlayed && playMode === 'metro') {
+        // 出租车特殊效果：可以出任意地铁站牌，不需要检查连通性
+        // 但是限制只能出一张牌
+        if (cards.length > 1) {
+          return false; // 只能出一张牌
+        }
+        return true; // 跳过连通性检查
+      }
+      
       // 获取桌面上最后一张牌
       const lastTableCard = tableCards[tableCards.length - 1];
       
@@ -1091,18 +1292,20 @@ function renderCards() {
   
   // 渲染AI手牌 - 只在调试模式下显示
   if (debugMode) {
-    // 显示AI手牌区域
-    aiHandElement.style.display = 'block';
     // 调试模式下显示AI完整手牌
     aiHand.forEach((card, index) => {
       const cardElement = createCardElement(card, index);
       cardElement.id = `ai-card-${index}`;
       aiHandElement.appendChild(cardElement);
     });
-  } else {
-    // 非调试模式下隐藏AI手牌区域
-    aiHandElement.style.display = 'none';
   }
+  
+  // 控制AI手牌标题的显示/隐藏
+  const aiHandTitle = document.querySelector('.card-area h3:nth-of-type(2)');
+  if (aiHandTitle) {
+    aiHandTitle.style.display = debugMode ? 'block' : 'none';
+  }
+  // 注意：AI手牌区域的显示/隐藏由调试按钮点击事件和initializeGame函数控制
 
   
   // 修改桌面牌区域为横向显示

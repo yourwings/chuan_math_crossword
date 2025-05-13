@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>北京地铁漫游游戏 - 主入口</title>
+  <title>小川漫游游戏</title>
   <link rel="stylesheet" href="metro_styles.css">
   <style>
     * {
@@ -138,18 +138,19 @@
 <body>
   <div class="container">
     <header>
-      <h1>北京地铁漫游游戏</h1>
+      <h1>小川地铁漫游</h1>
     </header>
     
     <div class="game-description">
-      <p>欢迎来到北京地铁漫游游戏！这是一款基于北京地铁线路的益智游戏，帮助您熟悉北京地铁网络，锻炼路线规划能力。</p>
+      <p>欢迎来到小川地铁漫游游戏！这是一款基于北京地铁线路的益智游戏。部分模式参考小川常玩的tabledox出品的《地铁漫游》桌游。</p>
+      <p>通过地铁牌可以熟悉北京地铁网络，锻炼路线规划能力</p>
       <p>请选择下面的游戏模式开始您的地铁漫游之旅！</p>
     </div>
     
     <div class="game-modes">
       <div class="game-mode-card">
         <div class="metro-icon">🚇</div>
-        <h2>单人漫游模式</h2>
+        <h2>单人漫游</h2>
         <p>系统随机选择起点站和终点站，玩家需要从手中的地铁牌中选择正确的站点，按顺序连接起点和终点。</p>
         <button class="play-button" onclick="window.location.href='index.html'">开始游戏</button>
       </div>
@@ -169,8 +170,15 @@
       </div>
       
       <div class="game-mode-card">
+        <div class="metro-icon">🤖</div>
+        <h2>AI对战模式</h2>
+        <p>与AI进行地铁牌对战，看谁能先出完手中的牌！使用地铁站牌、出租车和公交车牌，规划最佳路线战胜AI对手。</p>
+        <button class="play-button" onclick="window.location.href='ai_battle.html'">开始游戏</button>
+      </div>
+      
+      <div class="game-mode-card">
         <div class="metro-icon">👥</div>
-        <h2>多人对战模式</h2>
+        <h2>地铁漫游(真人对战)</h2>
         <p>与朋友一起比赛，看谁能更快地完成地铁路线规划。支持2-4名玩家同时参与，增加游戏的竞争性和趣味性。</p>
         <button class="play-button" disabled>即将推出</button>
       </div>

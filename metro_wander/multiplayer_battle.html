@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>北京地铁漫游 - AI对战模式</title>
+  <title>北京地铁漫游 - 真人对战模式</title>
   <link rel="stylesheet" href="metro_styles.css">
   <style>
     .game-container {
@@ -50,7 +50,7 @@
       border: 2px dashed #0078d7;
     }
 
-    .player-hand, .ai-hand {
+    .player-hand {
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
@@ -60,9 +60,14 @@
       min-height: 100px;
     }
 
-    .ai-hand {
+    .other-player-hand {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 8px;
       background-color: #f5e8e8;
-      display: none; /* 默认隐藏AI手牌区域 */
+      border-radius: 8px;
+      min-height: 60px;
     }
 
     .card {
@@ -259,63 +264,194 @@
       font-size: 14px;
       color: #666;
     }
-    .debug-info {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: rgba(255, 255, 255, 0.95);
-      border: 1px solid #ddd;
+
+    /* 多人游戏特有样式 */
+    .player-info {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+      padding: 5px;
       border-radius: 5px;
-      padding: 10px;
-      width: 250px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      z-index: 100;
-      max-height: 80vh;
-      overflow-y: auto;
     }
-    
-    .debug-info h3 {
-      margin-top: 0;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #eee;
-      color: #333;
+
+    .player-info.current-player {
+      background-color: rgba(0, 120, 215, 0.1);
+      border-left: 4px solid #0078d7;
     }
-    
-    .debug-info h4 {
-      margin: 10px 0 5px;
-      color: #0078d7;
+
+    .player-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: #ddd;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-right: 10px;
+      font-weight: bold;
     }
-    
-    #debug-content {
+
+    .player-name {
+      flex-grow: 1;
+      font-weight: bold;
+    }
+
+    .player-cards-count {
+      background-color: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 10px;
       font-size: 14px;
     }
-    
-    #debug-content ul {
-      margin: 5px 0;
-      padding-left: 20px;
+
+    .timer-bar {
+      height: 5px;
+      background-color: #ddd;
+      border-radius: 2px;
+      margin-top: 5px;
+      overflow: hidden;
     }
-    
-    #debug-content p {
-      margin: 5px 0;
+
+    .timer-progress {
+      height: 100%;
+      background-color: #0078d7;
+      width: 100%;
+      transition: width 1s linear;
+    }
+
+    /* 游戏设置面板 */
+    .setup-panel {
+      background-color: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      margin: 0 auto 20px;
+    }
+
+    .setup-panel h2 {
+      color: #0078d7;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .player-list {
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .player-list-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .player-list-item:last-child {
+      border-bottom: none;
+    }
+
+    .connection-status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .connection-status.connected {
+      background-color: #28a745;
+    }
+
+    .connection-status.connecting {
+      background-color: #ffc107;
+    }
+
+    .connection-status.disconnected {
+      background-color: #dc3545;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>北京地铁漫游 - AI对战模式</h1>
-      <a href="main.html" class="back-link" style="display: none;">返回主页</a>
+      <h1>北京地铁漫游 - 真人对战模式</h1>
+      <a href="main.html" class="back-link">返回主页</a>
     </header>
 
-    <div class="game-container">
+    <!-- 游戏设置面板 -->
+    <div class="setup-panel" id="setup-panel">
+      <h2>游戏设置</h2>
+      <div class="form-group">
+        <label for="player-name">你的名字</label>
+        <input type="text" id="player-name" placeholder="输入你的名字" maxlength="12">
+      </div>
+      
+      <div class="form-group">
+        <label>游戏模式</label>
+        <div class="action-buttons">
+          <button id="create-game-btn" class="action-button">创建游戏</button>
+          <button id="join-game-btn" class="action-button">加入游戏</button>
+        </div>
+      </div>
+      
+      <div id="join-game-panel" style="display: none;">
+        <div class="form-group">
+          <label>可用游戏</label>
+          <div class="player-list" id="available-games">
+            <div class="player-list-item">正在搜索局域网内的游戏...</div>
+          </div>
+          <button id="refresh-games-btn" class="action-button">刷新游戏列表</button>
+        </div>
+      </div>
+      
+      <div id="waiting-room" style="display: none;">
+        <h3>等待其他玩家加入...</h3>
+        <div class="form-group">
+          <label>已加入玩家</label>
+          <div class="player-list" id="joined-players"></div>
+        </div>
+        <div class="action-buttons">
+          <button id="start-game-btn" class="action-button" disabled>开始游戏 (至少需要2名玩家)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏主界面 -->
+    <div class="game-container" id="game-container" style="display: none;">
       <div class="game-info">
-        <div id="player-cards-count">玩家手牌: 8</div>
-        <div id="ai-cards-count">AI手牌: 8</div>
         <div id="deck-count">牌堆剩余: 0</div>
-        <div id="current-turn">当前回合: 玩家</div>
+        <div id="current-turn">当前回合: 等待游戏开始</div>
       </div>
 
-      <div class="game-message" id="game-message">游戏开始！请选择一种出牌方式</div>
+      <div class="game-message" id="game-message">等待游戏开始...</div>
+
+      <!-- 玩家列表 -->
+      <div id="players-list">
+        <!-- 玩家信息将在这里动态生成 -->
+      </div>
 
       <div class="card-area">
         <h3>桌面牌</h3>
@@ -323,23 +459,18 @@
           <!-- 桌面牌将在这里显示 -->
         </div>
 
-        <h3>AI手牌</h3>
-        <div class="ai-hand" id="ai-hand">
-          <!-- AI手牌将在这里显示 -->
-        </div>
-
-        <h3>玩家手牌</h3>
+        <h3>你的手牌</h3>
         <div class="player-hand" id="player-hand">
           <!-- 玩家手牌将在这里显示 -->
         </div>
       </div>
 
-      <div class="action-buttons">
-        <button id="play-metro-btn" class="action-button">坐地铁</button>
-        <button id="play-taxi-btn" class="action-button">乘出租</button>
-        <button id="play-bus-btn" class="action-button">坐公交</button>
-        <button id="draw-card-btn" class="action-button">摸牌</button>
-        <button id="cancel-selection-btn" class="action-button">取消选择</button>
+      <div class="action-buttons" id="action-buttons">
+        <button id="play-metro-btn" class="action-button" disabled>坐地铁</button>
+        <button id="play-taxi-btn" class="action-button" disabled>乘出租</button>
+        <button id="play-bus-btn" class="action-button" disabled>坐公交</button>
+        <button id="draw-card-btn" class="action-button" disabled>摸牌</button>
+        <button id="cancel-selection-btn" class="action-button" disabled>取消选择</button>
       </div>
 
       <div class="game-result" id="game-result" style="display: none;"></div>
@@ -349,7 +480,7 @@
         <button id="back-to-main" class="action-button">返回主页</button>
       </div>
       
-      <div class="game-rules" style="margin-top: 20px; text-align: left; display: none;">
+      <div class="game-rules" style="margin-top: 20px; text-align: left;">
         <h3 style="cursor: pointer;" onclick="document.querySelector('.game-rules-content').style.display = document.querySelector('.game-rules-content').style.display === 'none' ? 'block' : 'none';">游戏规则 ▼</h3>
         <div class="game-rules-content" style="display: none; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
           <p><strong>游戏目标：</strong>先出完手中的所有牌即获胜。</p>
@@ -360,18 +491,16 @@
             <li><strong>坐公交：</strong>出一张公交车牌，将当前最后一张地铁站牌和倒数第二张地铁站牌位置交换；之后可以选择出一张地铁站牌，规则与坐地铁一致。</li>
           </ul>
           <p><strong>摸牌：</strong>如果无法按规则出牌，必须摸一张牌。</p>
+          <p><strong>超时规则：</strong>每位玩家有60秒的出牌时间，超时将自动执行摸牌操作。</p>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="ai_battle.js"></script>
+  <script type="module" src="multiplayer_battle.js"></script>
   <script>
     // 显示游戏规则
     document.addEventListener('DOMContentLoaded', () => {
-      // 显示游戏规则区域
-      document.querySelector('.game-rules').style.display = 'block';
-      
       // 返回主页按钮事件
       document.getElementById('back-to-main').addEventListener('click', () => {
         window.location.href = 'main.html';
