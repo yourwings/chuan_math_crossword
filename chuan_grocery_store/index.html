@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小川杂货店</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>小川杂货店</h1>
+      <div class="game-controls">
+        <div class="difficulty-selector">
+          <label for="difficulty-select">难度：</label>
+          <select id="difficulty-select">
+            <option value="easy">简单</option>
+            <option value="medium">中等</option>
+            <option value="hard">困难</option>
+          </select>
+        </div>
+        <div class="money-container">
+          <span>小川的钱包：</span>
+          <span id="player-money">0</span>
+          <span>元</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="store-container">
+        <div class="store-header">
+          <h2>今日商品</h2>
+          <button id="common-add-btn" class="common-add-btn-inline">加入购物车</button>
+        </div>
+        <div id="products-container" class="products-grid"></div>
+      </div>
+
+      <div class="cart-container">
+        <h2>购物车</h2>
+        <div id="cart-items" class="cart-items"></div>
+        <div class="cart-summary">
+          <div class="cart-total">
+            <span>总计：</span>
+            <span id="cart-total">0</span>
+            <span>元</span>
+          </div>
+          <div class="cart-actions">
+            <button id="clear-cart-btn" class="btn">清空购物车</button>
+            <button id="checkout-btn" class="btn btn-primary">结算</button>
+          </div>
+          <div class="game-controls-bottom">
+            <button id="restart-game-btn" class="btn">重新开始</button>
+            <button id="back-btn" class="btn">返回主页</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="game-result" class="game-result hidden">
+      <div class="result-content">
+        <h2 id="result-title">购物成功！</h2>
+        <p id="result-message">你成功购买了 <span id="items-count">0</span> 件商品，花费了 <span id="total-spent">0</span> 元。</p>
+        <div class="result-stats">
+          <p>剩余金额：<span id="remaining-money">0</span> 元</p>
+        </div>
+        <button id="play-again-btn" class="btn btn-primary">再玩一次</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
