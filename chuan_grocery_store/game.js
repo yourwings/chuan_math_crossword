@@ -370,7 +370,19 @@ function removeFromCart(productId) {
 
 // 清空购物车
 function clearCart() {
+  // 清空购物车前，先移除所有商品卡片的in-cart类
+  gameState.cart.forEach(product => {
+    const productCard = document.querySelector(`.product-card[data-product-id="${product.id}"]`);
+    if (productCard) {
+      productCard.classList.remove('in-cart');
+      productCard.style.pointerEvents = 'auto';
+    }
+  });
+
+  // 清空购物车数组
   gameState.cart = [];
+
+  // 更新UI
   renderCart();
   updateButtonStates();
   updateRemainingBalance();
