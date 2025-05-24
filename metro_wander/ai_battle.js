@@ -130,6 +130,7 @@ function initializeGame() {
   // 重置出牌次数标记
   window.metroCardPlayed = false;
   window.specialEffectPlayed = false;
+  window.taxiEffectActive = false; // 新增标记，用于区分出租车特殊效果
   
   // 重置游戏统计数据
   gameStats = {
@@ -368,6 +369,7 @@ function handlePlayerPlay() {
     specialAction = true;
     // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
     window.specialEffectPlayed = true;
+    window.taxiEffectActive = true; // 设置出租车特殊效果标记
     console.log('出租车特殊效果已触发，specialAction =', specialAction);
   } else if (playMode === 'bus') {
     // 公交车牌特殊效果：将倒数第二张地铁牌放到牌堆末尾
@@ -407,6 +409,7 @@ function handlePlayerPlay() {
     isSpecialEffectPlay = true;
     // 重置特殊效果标记
     window.specialEffectPlayed = false;
+    window.taxiEffectActive = false; // 重置出租车/公交车特殊效果标记
     specialAction = false;
     
     // 移除所有可能存在的结束回合按钮
@@ -942,7 +945,7 @@ function isValidPlay(cards, mode) {
     // 如果是地铁站牌，检查连通性
     if (cardType === CARD_TYPE.STATION && tableCards.length > 0) {
       // 检查是否是出租车特殊效果后的出牌
-      if (window.specialEffectPlayed && playMode === 'metro') {
+      if (window.taxiEffectActive && playMode === 'metro') {
         // 出租车特殊效果：可以出任意地铁站牌，不需要检查连通性
         // 但是限制只能出一张牌
         if (cards.length > 1) {

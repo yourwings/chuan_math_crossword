@@ -235,3 +235,25 @@
   background-color: #f8d7da;
   border-color: #f5c6cb;
 }
+
+/* 游戏消息样式 */
+.game-message {
+  margin: 15px 0;
+  padding: 10px;
+  background-color: #e8f4fc;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* 上一步操作记录样式 */
+.last-action {
+  display: block;
+  color: #0078d7;
+  font-weight: bold;
+  margin-bottom: 5px;
+  padding: 3px 6px;
+  background-color: #f0f7ff;
+  border-radius: 4px;
+  border-left: 3px solid #0078d7;
+}
