@@ -19,5 +19,8 @@
   "homepage": "https://github.com/yourwings/chuan_math_crossword#readme",
   "devDependencies": {
     "vite": "^6.3.4"
+  },
+  "dependencies": {
+    "ws": "^8.18.2"
   }
 }

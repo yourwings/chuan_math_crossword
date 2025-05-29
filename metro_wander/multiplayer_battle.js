@@ -3,6 +3,12 @@
 // 导入地铁数据
 import { metroData } from './metro_data.js';
 
+// WebSocket连接
+let socket = null;
+let isConnected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+
 // 多人游戏状态变量
 let isHost = false;
 let roomId = null;
@@ -141,6 +147,883 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * 初始化WebSocket连接
+ */
+function initializeWebSocket(playerName, roomIdParam = null) {
+  // 生成唯一的玩家ID
+  localPlayerId = 'player_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  localPlayerName = playerName;
+  
+  // 构建WebSocket URL
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.hostname}:3000?playerId=${localPlayerId}&playerName=${encodeURIComponent(playerName)}`;
+  
+  // 如果是加入现有房间，添加房间ID参数
+  if (roomIdParam) {
+    roomId = roomIdParam;
+    socket = new WebSocket(`${wsUrl}&roomId=${roomId}`);
+  } else {
+    socket = new WebSocket(wsUrl);
+  }
+  
+  // 连接打开事件
+  socket.addEventListener('open', () => {
+    console.log('WebSocket连接已建立');
+    isConnected = true;
+    reconnectAttempts = 0;
+    showGameMessage('已连接到服务器');
+    
+    // 延迟执行后续操作，避免消息端口关闭错误
+    setTimeout(() => {
+      console.log('WebSocket连接已稳定');
+    }, 100);
+  });
+  
+  // 接收消息事件
+  socket.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('收到服务器消息:', data);
+      
+      // 添加更详细的调试信息
+      if (data.type === 'room_joined') {
+        console.log('收到room_joined消息，房间ID:', data.roomId);
+        console.log('玩家列表:', data.players);
+        console.log('房主ID:', data.hostId);
+        console.log('本地玩家ID:', localPlayerId);
+      }
+      
+      // 使用setTimeout延迟处理消息，避免消息端口关闭错误
+      setTimeout(() => {
+        // 根据消息类型处理不同的操作
+        switch (data.type) {
+          case 'room_created':
+            handleRoomCreated(data);
+            break;
+          case 'room_joined':
+            handleRoomJoined(data);
+            break;
+          case 'player_joined':
+            handlePlayerJoined(data);
+            break;
+          case 'player_left':
+            handlePlayerLeft(data);
+            break;
+          case 'game_started':
+            handleGameStarted(data);
+            break;
+          case 'card_played':
+            handleCardPlayed(data);
+            break;
+          case 'player_drew_card':
+            handlePlayerDrewCard(data);
+            break;
+          case 'card_drawn':
+            handleCardDrawn(data);
+            break;
+          case 'game_over':
+            handleGameOver(data);
+            break;
+          case 'room_list':
+            handleRoomList(data);
+            break;
+          case 'ai_added':
+            handleAIAdded(data);
+            break;
+          case 'turn_ended':
+            handleTurnEnded(data);
+            break;
+          case 'error':
+            showGameMessage(`错误: ${data.message}`, true);
+            break;
+          default:
+            console.log(`未知消息类型: ${data.type}`);
+        }
+      }, 0);
+    } catch (error) {
+      console.error('处理消息时出错:', error);
+    }
+  });
+  
+  // 连接关闭事件
+  socket.addEventListener('close', () => {
+    console.log('WebSocket连接已关闭');
+    isConnected = false;
+    
+    // 使用setTimeout延迟处理关闭事件，避免消息端口关闭错误
+    setTimeout(() => {
+      // 尝试重新连接
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts++;
+        showGameMessage(`连接已断开，正在尝试重新连接 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+        setTimeout(() => {
+          if (roomId) {
+            initializeWebSocket(localPlayerName, roomId);
+          } else {
+            initializeWebSocket(localPlayerName);
+          }
+        }, 3000);
+      } else {
+        showGameMessage('连接已断开，请刷新页面重试', true);
+      }
+    }, 0);
+  });
+  
+  // 连接错误事件
+  socket.addEventListener('error', (error) => {
+    console.error('WebSocket连接错误:', error);
+    // 使用setTimeout延迟处理错误事件，避免消息端口关闭错误
+    setTimeout(() => {
+      showGameMessage('连接错误，请检查网络连接', true);
+    }, 0);
+  });
+}
+
+/**
+ * 处理房间创建成功消息
+ */
+function handleRoomCreated(data) {
+  console.log('执行handleRoomCreated函数，接收到的数据:', data);
+  roomId = data.roomId;
+  players = data.players;
+  isHost = true;
+  isInWaitingRoom = true;
+  
+  console.log('设置状态变量 - roomId:', roomId);
+  console.log('设置状态变量 - players:', players);
+  console.log('设置状态变量 - isHost:', isHost);
+  console.log('设置状态变量 - isInWaitingRoom:', isInWaitingRoom);
+  
+  // 更新UI
+  console.log('更新UI元素显示状态');
+  console.log('setupPanelElement:', setupPanelElement);
+  console.log('waitingRoomElement:', waitingRoomElement);
+  
+  // 不隐藏整个setupPanelElement，因为waitingRoomElement是它的子元素
+  // 隐藏设置面板中的其他元素
+  document.querySelectorAll('#setup-panel > *:not(#waiting-room)').forEach(el => {
+    if (el.id !== 'waiting-room') {
+      el.style.display = 'none';
+    }
+  });
+  
+  // 显示等待室
+  waitingRoomElement.style.display = 'block';
+  
+  // 确保等待室可见
+  waitingRoomElement.style.visibility = 'visible';
+  waitingRoomElement.style.opacity = '1';
+  
+  startGameBtn.disabled = players.length < 2;
+  
+  console.log('UI元素显示状态更新后:');
+  console.log('waitingRoomElement.style.display:', waitingRoomElement.style.display);
+  console.log('waitingRoomElement.style.visibility:', waitingRoomElement.style.visibility);
+  console.log('waitingRoomElement.style.opacity:', waitingRoomElement.style.opacity);
+  
+  // 更新已加入玩家列表
+  console.log('调用updateJoinedPlayersList更新玩家列表');
+  updateJoinedPlayersList();
+  
+  showGameMessage(`房间已创建，ID: ${roomId}`);
+  console.log('handleRoomCreated函数执行完毕');
+}
+
+/**
+ * 处理加入房间成功消息
+ */
+function handleRoomJoined(data) {
+  console.log('执行handleRoomJoined函数，接收到的数据:', data);
+  roomId = data.roomId;
+  players = data.players;
+  isHost = data.hostId === localPlayerId;
+  isInWaitingRoom = true;
+  
+  console.log('设置状态变量 - roomId:', roomId);
+  console.log('设置状态变量 - players:', players);
+  console.log('设置状态变量 - isHost:', isHost);
+  console.log('设置状态变量 - isInWaitingRoom:', isInWaitingRoom);
+  
+  // 更新UI
+  console.log('更新UI元素显示状态');
+  console.log('setupPanelElement:', setupPanelElement);
+  console.log('joinGamePanelElement:', joinGamePanelElement);
+  console.log('waitingRoomElement:', waitingRoomElement);
+  
+  // 不隐藏整个setupPanelElement，因为waitingRoomElement是它的子元素
+  // 隐藏设置面板中的其他元素
+  document.querySelectorAll('#setup-panel > *:not(#waiting-room)').forEach(el => {
+    if (el.id !== 'waiting-room') {
+      el.style.display = 'none';
+    }
+  });
+  joinGamePanelElement.style.display = 'none';
+  waitingRoomElement.style.display = 'block';
+  startGameBtn.disabled = !isHost || players.length < 2;
+  
+  console.log('UI元素显示状态更新后:');
+  console.log('setupPanelElement.style.display:', setupPanelElement.style.display);
+  console.log('joinGamePanelElement.style.display:', joinGamePanelElement.style.display);
+  console.log('waitingRoomElement.style.display:', waitingRoomElement.style.display);
+  
+  // 更新已加入玩家列表
+  console.log('调用updateJoinedPlayersList更新玩家列表');
+  updateJoinedPlayersList();
+  
+  showGameMessage(`已加入房间 ${roomId}`);
+  console.log('handleRoomJoined函数执行完毕');
+}
+
+/**
+ * 处理玩家加入消息
+ */
+function handlePlayerJoined(data) {
+  players = data.players;
+  
+  // 更新已加入玩家列表
+  updateJoinedPlayersList();
+  
+  // 如果是房主，当玩家数量达到2人或以上时启用开始游戏按钮
+  if (isHost) {
+    startGameBtn.disabled = players.length < 2;
+  }
+  
+  showGameMessage(`玩家 ${data.player.name} 加入了游戏`);
+}
+
+/**
+ * 处理玩家离开消息
+ */
+function handlePlayerLeft(data) {
+  players = data.players;
+  
+  // 检查房主是否变更
+  isHost = data.hostId === localPlayerId;
+  
+  // 更新已加入玩家列表
+  updateJoinedPlayersList();
+  
+  // 如果是房主，当玩家数量少于2人时禁用开始游戏按钮
+  if (isHost) {
+    startGameBtn.disabled = players.length < 2;
+  }
+  
+  showGameMessage(`玩家离开了游戏`);
+}
+
+/**
+ * 处理游戏开始消息
+ */
+function handleGameStarted(data) {
+  players = data.players;
+  tableCards = data.tableCards;
+  currentPlayerId = data.currentPlayerId;
+  gameStarted = true;
+  isInWaitingRoom = false;
+  
+  // 更新本地玩家手牌
+  const localPlayer = players.find(player => player.id === localPlayerId);
+  if (localPlayer) {
+    playerHand = localPlayer.cards;
+  }
+  
+  // 更新UI
+  waitingRoomElement.style.display = 'none';
+  gameContainerElement.style.display = 'block';
+  
+  // 渲染卡牌
+  renderCards();
+  
+  // 更新游戏信息
+  updateGameInfo();
+  
+  // 更新玩家列表UI
+  updatePlayersListUI();
+  
+  // 更新按钮状态
+  updateButtonStates();
+  
+  showGameMessage('游戏开始！');
+}
+
+/**
+ * 处理玩家出牌消息
+ */
+function handleCardPlayed(data) {
+  // 更新桌面牌
+  tableCards = data.tableCards;
+  
+  // 更新当前玩家
+  currentPlayerId = data.currentPlayerId;
+  
+  // 如果是其他玩家出的牌，更新他们的手牌数量
+  const playerIndex = players.findIndex(p => p.id === data.playerId);
+  if (playerIndex !== -1) {
+    players[playerIndex].cards = players[playerIndex].cards || [];
+    players[playerIndex].cards.length = data.remainingCards;
+  }
+  
+  // 渲染卡牌
+  renderCards();
+  
+  // 更新游戏信息
+  updateGameInfo();
+  
+  // 更新玩家列表UI
+  updatePlayersListUI();
+  
+  // 更新按钮状态
+  updateButtonStates();
+  
+  // 显示出牌消息
+  const playerName = players.find(p => p.id === data.playerId)?.name || '玩家';
+  let cardTypeText = '';
+  let effectMessage = '';
+  let specialAction = false;
+  
+  switch (data.playMode) {
+    case 'metro':
+      cardTypeText = '地铁站牌';
+      // 地铁牌特殊效果：可以连续出两张地铁牌
+      if (data.playerId === localPlayerId) {
+        effectMessage = '可以选择打出第二张地铁站牌';
+        specialAction = true;
+        console.log('地铁牌特殊效果已触发，specialAction =', specialAction);
+      }
+      break;
+    case 'taxi':
+      cardTypeText = '出租车牌';
+      // 出租车牌特殊效果：出牌后摸一张牌并可选择打出一张地铁牌
+      if (data.playerId === localPlayerId) {
+        effectMessage = '出租车可以连接任意两个地铁站！摸一张牌后可以选择打出一张地铁牌';
+        specialAction = true;
+        // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
+        window.specialEffectPlayed = true;
+        window.taxiEffectActive = true; // 设置出租车特殊效果标记
+        console.log('出租车特殊效果已触发，specialAction =', specialAction);
+      }
+      break;
+    case 'bus':
+      cardTypeText = '公交车牌';
+      // 公交车牌特殊效果：将倒数第二张地铁牌放到牌堆末尾
+      if (data.playerId === localPlayerId) {
+        // 首先检查是否有足够的地铁站牌在桌面上
+        const stationCards = tableCards.filter(card => card.type === CARD_TYPE.STATION);
+        if (stationCards.length >= 2) {
+          // 找到倒数第二张地铁站牌
+          const secondLastStationIndex = tableCards.findIndex((card, index) => {
+            if (card.type !== CARD_TYPE.STATION) return false;
+            const stationsAfter = tableCards.slice(index + 1).filter(c => c.type === CARD_TYPE.STATION);
+            return stationsAfter.length === 1; // 如果后面只有一张地铁站牌，那么这张就是倒数第二张
+          });
+          
+          if (secondLastStationIndex !== -1) {
+            // 将倒数第二张地铁站牌移到牌堆末尾（而不是牌堆首位）
+            const secondLastStation = tableCards[secondLastStationIndex];
+            effectMessage = `公交车将${secondLastStation.name}站移到了牌堆末尾！可以选择打出一张地铁牌`;
+            specialAction = true; // 公交车也设置为特殊行动，允许继续出一张地铁牌
+            console.log('公交车特殊效果已触发，specialAction =', specialAction);
+            // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
+            window.specialEffectPlayed = true;
+          } else {
+            effectMessage = '公交车效果：无法找到倒数第二张地铁站牌';
+          }
+        } else {
+          effectMessage = '公交车效果：桌面上没有足够的地铁站牌';
+        }
+      }
+      break;
+    default:
+      cardTypeText = '牌';
+  }
+  
+  // 显示出牌消息
+  showGameMessage(`${playerName} 出了 ${data.cards.length} 张${cardTypeText}`);
+  
+  // 检查是否是特殊效果后的出牌（只能出一张）
+  let isSpecialEffectPlay = false;
+  if (window.specialEffectPlayed && data.playMode === 'metro' && data.playerId === localPlayerId) {
+    // 标记这是特殊效果后的出牌
+    isSpecialEffectPlay = true;
+    // 重置特殊效果标记
+    window.specialEffectPlayed = false;
+    window.taxiEffectActive = false; // 重置出租车/公交车特殊效果标记
+    specialAction = false;
+    
+    // 移除所有可能存在的结束回合按钮
+    const existingEndTurnBtn = document.getElementById('end-turn-btn');
+    if (existingEndTurnBtn) {
+      existingEndTurnBtn.remove();
+    }
+    
+    console.log('特殊效果后出地铁牌');
+  }
+  
+  // 处理特殊效果
+  if (specialAction && data.playerId === localPlayerId) {
+    console.log('进入特殊行动处理流程');
+    
+    // 如果是出租车，先摸一张牌
+    if (data.playMode === 'taxi') {
+      // 发送摸牌请求到服务器
+      sendToServer({
+        type: 'draw_card',
+        roomId: roomId
+      });
+      
+      // 显示提示消息
+      showGameMessage('出租车效果：摸了一张牌，可以选择打出一张地铁站牌或结束回合');
+    } else if (data.playMode === 'bus') {
+      // 公交车效果已经在前面处理过了
+      showGameMessage('公交车效果已生效，可以选择打出一张地铁站牌或结束回合');
+    }
+    
+    // 移除所有可能已存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
+    // 创建结束回合按钮
+    const endTurnBtn = document.createElement('button');
+    endTurnBtn.id = 'end-turn-btn';
+    endTurnBtn.className = 'action-button';
+    endTurnBtn.textContent = '结束回合';
+    // 使用id选择器确保添加到正确的按钮容器中
+    document.getElementById('action-buttons').appendChild(endTurnBtn);
+    console.log('创建了结束回合按钮');
+    
+    // 添加结束回合按钮点击事件
+    endTurnBtn.addEventListener('click', () => {
+      // 移除结束回合按钮
+      endTurnBtn.remove();
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      window.specialEffectPlayed = false;
+      window.taxiEffectActive = false;
+      
+      // 发送结束回合请求到服务器
+      sendToServer({
+        type: 'end_turn',
+        roomId: roomId
+      });
+      
+      showGameMessage('结束了回合');
+    });
+    
+    // 设置出牌模式为地铁，并标记这是特殊效果后的出牌（只能出一张）
+    playMode = 'metro';
+    // 添加一个标记，表示这是特殊效果后的出牌，只能出一张
+    window.specialEffectPlayed = true;
+    // 修改提示信息，明确告知玩家只能出一张地铁牌
+    showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
+    updateButtonStates();
+  } else if (data.playMode === 'metro' && data.playerId === localPlayerId) {
+    // 如果是地铁牌，允许玩家选择出第二张地铁牌或结束回合
+    // 检查是否已经出过一张地铁牌（第二次出牌）
+    if (window.metroCardPlayed) {
+      // 如果已经出过一张地铁牌，直接结束回合
+      console.log('已经出过一张地铁牌，自动结束回合');
+      
+      // 移除所有可能存在的结束回合按钮
+      const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+      allEndTurnBtns.forEach(btn => btn.remove());
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      
+      // 发送结束回合请求到服务器
+      sendToServer({
+        type: 'end_turn',
+        roomId: roomId,
+        playerId: localPlayerId
+      });
+      
+      showGameMessage('已出过地铁牌，自动结束回合');
+    } else {
+      // 标记已经出过一张地铁牌
+      window.metroCardPlayed = true;
+      
+      // 移除所有可能存在的结束回合按钮
+      const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+      allEndTurnBtns.forEach(btn => btn.remove());
+      
+      // 创建结束回合按钮
+      const endTurnBtn = document.createElement('button');
+      endTurnBtn.id = 'end-turn-btn';
+      endTurnBtn.className = 'action-button';
+      endTurnBtn.textContent = '结束回合';
+      // 使用id选择器确保添加到正确的按钮容器中
+      document.getElementById('action-buttons').appendChild(endTurnBtn);
+      
+      // 添加结束回合按钮点击事件
+      endTurnBtn.addEventListener('click', () => {
+        // 移除结束回合按钮
+        endTurnBtn.remove();
+        
+        // 重置标记
+        window.metroCardPlayed = false;
+        window.specialEffectPlayed = false;
+        
+        // 发送结束回合请求到服务器
+        sendToServer({
+          type: 'end_turn',
+          roomId: roomId,
+          playerId: localPlayerId
+        });
+        
+        showGameMessage('结束了回合');
+      });
+    }
+  }
+  
+  // 如果是特殊效果后出的地铁牌，直接结束回合
+  if (isSpecialEffectPlay) {
+    console.log('特殊效果后出完地铁牌，自动结束回合');
+    
+    // 移除所有可能存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
+    // 重置标记
+    window.metroCardPlayed = false;
+    
+    // 发送结束回合请求到服务器
+    sendToServer({
+      type: 'end_turn',
+      roomId: roomId
+    });
+    
+    showGameMessage('特殊效果后出完地铁牌，自动结束回合');
+    return;
+  }
+  
+  // 如果是地铁牌，允许玩家选择出第二张地铁牌或结束回合
+  if (data.playMode === 'metro' && data.playerId === localPlayerId) {
+    // 检查是否已经出过一张地铁牌（第二次出牌）
+    if (window.metroCardPlayed) {
+      // 如果已经出过一张地铁牌，直接结束回合
+      console.log('已经出过一张地铁牌，自动结束回合');
+      
+      // 移除所有可能存在的结束回合按钮
+      const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+      allEndTurnBtns.forEach(btn => btn.remove());
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      
+      // 发送结束回合请求到服务器
+      sendToServer({
+        type: 'end_turn',
+        roomId: roomId
+      });
+      
+      showGameMessage('已出过地铁牌，自动结束回合');
+      return;
+    }
+    
+    // 标记已经出过一张地铁牌
+    window.metroCardPlayed = true;
+    
+    // 移除所有可能存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
+    // 创建结束回合按钮
+    const endTurnBtn = document.createElement('button');
+    endTurnBtn.id = 'end-turn-btn';
+    endTurnBtn.className = 'action-button';
+    endTurnBtn.textContent = '结束回合';
+    // 使用id选择器确保添加到正确的按钮容器中
+    document.getElementById('action-buttons').appendChild(endTurnBtn);
+    
+    // 添加结束回合按钮点击事件
+    endTurnBtn.addEventListener('click', () => {
+      // 移除结束回合按钮
+      endTurnBtn.remove();
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      window.specialEffectPlayed = false;
+      window.taxiEffectActive = false;
+      
+      // 发送结束回合请求到服务器
+      sendToServer({
+        type: 'end_turn',
+        roomId: roomId
+      });
+    });
+    
+    showGameMessage('可以选择打出第二张地铁站牌或结束回合');
+  }
+}
+
+/**
+ * 处理回合结束消息
+ */
+function handleTurnEnded(data) {
+  // 更新当前玩家ID
+  currentPlayerId = data.currentPlayerId;
+  
+  // 清除所有特殊效果标记
+  window.metroCardPlayed = false;
+  window.specialEffectPlayed = false;
+  window.taxiEffectActive = false;
+  
+  // 移除所有可能存在的结束回合按钮
+  const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+  allEndTurnBtns.forEach(btn => btn.remove());
+  
+  // 更新游戏信息
+  updateGameInfo();
+  
+  // 更新按钮状态
+  updateButtonStates();
+  
+  // 显示回合结束消息
+  const previousPlayer = players.find(p => p.id === data.previousPlayerId)?.name || '玩家';
+  const currentPlayer = players.find(p => p.id === data.currentPlayerId)?.name || '玩家';
+  const isLocalPlayerTurn = data.currentPlayerId === localPlayerId;
+  
+  if (isLocalPlayerTurn) {
+    showGameMessage(`${previousPlayer} 结束了回合，现在轮到你了`);
+  } else {
+    showGameMessage(`${previousPlayer} 结束了回合，现在轮到 ${currentPlayer} 了`);
+  }
+}
+
+/**
+ * 处理玩家摸牌消息（其他玩家摸牌）
+ */
+function handlePlayerDrewCard(data) {
+  // 保存之前的当前玩家ID，用于显示回合结束消息
+  const previousPlayerId = data.playerId;
+  const previousPlayerName = players.find(p => p.id === previousPlayerId)?.name || '玩家';
+  
+  // 更新当前玩家
+  currentPlayerId = data.currentPlayerId;
+  const currentPlayerName = players.find(p => p.id === currentPlayerId)?.name || '玩家';
+  const isLocalPlayerTurn = currentPlayerId === localPlayerId;
+  
+  // 更新牌堆剩余数量
+  deckCountElement.textContent = `牌堆剩余: ${data.remainingDeckCount}`;
+  
+  // 如果是其他玩家摸的牌，更新他们的手牌数量
+  const playerIndex = players.findIndex(p => p.id === previousPlayerId);
+  if (playerIndex !== -1) {
+    players[playerIndex].cards = players[playerIndex].cards || [];
+    players[playerIndex].cards.length = data.remainingCards;
+  }
+  
+  // 更新游戏信息
+  updateGameInfo();
+  
+  // 更新玩家列表UI
+  updatePlayersListUI();
+  
+  // 更新按钮状态
+  updateButtonStates();
+  
+  // 显示摸牌消息
+  showGameMessage(`${previousPlayerName} 摸了一张牌`);
+  
+  // 显示回合切换消息
+  if (isLocalPlayerTurn) {
+    showGameMessage(`${previousPlayerName} 摸牌后回合结束，现在轮到你了`);
+  } else {
+    showGameMessage(`${previousPlayerName} 摸牌后回合结束，现在轮到 ${currentPlayerName} 了`);
+  }
+}
+
+/**
+ * 处理摸牌消息（当前玩家摸牌）
+ */
+function handleCardDrawn(data) {
+  // 使用drawCard函数处理服务器发送的卡牌
+  drawCard('player', data.card);
+  
+  // 更新牌堆剩余数量
+  deckCountElement.textContent = `牌堆剩余: ${data.remainingDeckCount}`;
+  
+  // 渲染卡牌
+  renderCards();
+  
+  // 保存当前玩家ID（即摸牌的玩家，也就是本地玩家）
+  const previousPlayerId = localPlayerId;
+  
+  // 计算下一个玩家ID（服务器不会在card_drawn消息中发送currentPlayerId）
+  // 找到当前玩家在players数组中的索引
+  const currentPlayerIndex = players.findIndex(p => p.id === localPlayerId);
+  // 计算下一个玩家的索引（循环到数组开头）
+  const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+  // 更新当前玩家ID为下一个玩家
+  currentPlayerId = players[nextPlayerIndex].id;
+  
+  // 获取下一个玩家的名称
+  const nextPlayer = players[nextPlayerIndex];
+  const nextPlayerName = nextPlayer ? nextPlayer.name : '其他玩家';
+  
+  // 更新游戏信息，确保UI显示正确的当前回合玩家
+  updateGameInfo();
+  
+  // 更新玩家列表UI
+  updatePlayersListUI();
+  
+  // 更新按钮状态
+  updateButtonStates();
+  
+  // 显示摸牌消息
+  showGameMessage('你摸了一张牌');
+  
+  // 显示回合结束消息 - 这里不再判断isLocalPlayerTurn，因为摸牌后回合一定会切换到其他玩家
+  showGameMessage(`你摸牌后回合结束，现在轮到 ${nextPlayerName} 了`);
+}
+
+/**
+ * 处理游戏结束消息
+ */
+function handleGameOver(data) {
+  gameOver = true;
+  
+  // 更新UI
+  const winnerName = data.winner.name;
+  const isLocalPlayerWin = data.winner.id === localPlayerId;
+  
+  // 显示游戏结果
+  gameResultElement.innerHTML = `
+    <h2>${isLocalPlayerWin ? '恭喜你获胜！' : `${winnerName} 获胜了！`}</h2>
+    <div class="game-stats">
+      <h3>游戏统计</h3>
+      <p>总共出牌数: ${gameStats.totalCards}</p>
+      <p>经过地铁站数: ${gameStats.metroStations}</p>
+      <p>乘坐出租车次数: ${gameStats.taxiRides}</p>
+      <p>乘坐公交车次数: ${gameStats.busRides}</p>
+    </div>
+  `;
+  
+  gameResultElement.className = isLocalPlayerWin ? 'game-result win' : 'game-result lose';
+  gameResultElement.style.display = 'block';
+  
+  // 禁用所有游戏按钮
+  playMetroBtn.disabled = true;
+  playTaxiBtn.disabled = true;
+  playBusBtn.disabled = true;
+  drawCardBtn.disabled = true;
+  cancelSelectionBtn.disabled = true;
+  
+  showGameMessage(`游戏结束，${winnerName} 获胜！`);
+}
+
+/**
+ * 处理房间列表消息
+ */
+function handleRoomList(data) {
+  const rooms = data.rooms;
+  
+  if (rooms.length === 0) {
+    availableGamesElement.innerHTML = '<div class="player-list-item">没有可用的游戏</div>';
+    return;
+  }
+  
+  let roomsHtml = '';
+  rooms.forEach(room => {
+    roomsHtml += `
+      <div class="player-list-item">
+        <span>${room.id} (${room.host})</span>
+        <span>${room.players}/4 玩家</span>
+        <button class="action-button join-room-btn" data-room-id="${room.id}">加入</button>
+      </div>
+    `;
+  });
+  
+  availableGamesElement.innerHTML = roomsHtml;
+  
+  // 添加加入房间按钮点击事件
+  document.querySelectorAll('.join-room-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const roomId = btn.getAttribute('data-room-id');
+      joinRoom(roomId);
+    });
+  });
+}
+
+/**
+ * 加入房间
+ * @param {string} roomId 房间ID
+ */
+function joinRoom(roomId) {
+  console.log('执行joinRoom函数，房间ID:', roomId);
+  
+  // 检查玩家名称
+  console.log('检查玩家名称，localPlayerName:', localPlayerName);
+  if (!localPlayerName) {
+    console.error('错误: 玩家名称为空');
+    alert('请输入你的名字');
+    return;
+  }
+  
+  // 生成本地玩家ID（如果尚未生成）
+  if (!localPlayerId) {
+    localPlayerId = 'player_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    console.log('生成新的本地玩家ID:', localPlayerId);
+  } else {
+    console.log('使用现有本地玩家ID:', localPlayerId);
+  }
+  
+  // 如果WebSocket未连接，先初始化连接
+  console.log('当前WebSocket连接状态 isConnected:', isConnected);
+  if (!isConnected) {
+    console.log('WebSocket未连接，初始化连接');
+    initializeWebSocket(localPlayerName);
+    
+    // 等待连接成功后发送加入房间请求
+    console.log('设置定时器等待连接建立');
+    const checkConnectionInterval = setInterval(() => {
+      console.log('检查WebSocket连接状态 isConnected:', isConnected);
+      if (isConnected) {
+        clearInterval(checkConnectionInterval);
+        console.log('WebSocket连接已建立，发送加入房间请求');
+        
+        // 发送加入房间请求
+        sendToServer({
+          type: 'join_room',
+          roomId: roomId,
+          playerName: localPlayerName,
+          playerId: localPlayerId
+        });
+      }
+    }, 100);
+  } else {
+    // 直接发送加入房间请求
+    console.log('WebSocket已连接，直接发送加入房间请求');
+    sendToServer({
+      type: 'join_room',
+      roomId: roomId,
+      playerName: localPlayerName,
+      playerId: localPlayerId
+    });
+  }
+  
+  console.log('joinRoom函数执行完毕');
+}
+
+/**
+ * 处理AI玩家添加消息
+ */
+function handleAIAdded(data) {
+  players = data.players;
+  
+  // 更新已加入玩家列表
+  updateJoinedPlayersList();
+  
+  // 如果是房主，当玩家数量达到2人或以上时启用开始游戏按钮
+  if (isHost) {
+    startGameBtn.disabled = players.length < 2;
+  }
+  
+  showGameMessage(`AI玩家 ${data.player.name} 已添加`);
+}
+
+/**
  * 初始化游戏
  */
 function initializeGame() {
@@ -175,6 +1058,12 @@ function initializeGame() {
     aiHandElement.style.display = (gameStarted && players.length > 0) ? 'none' : (debugMode ? 'flex' : 'none');
   }
   
+  // 如果是多人游戏模式，服务器会处理牌组创建和发牌
+  if (gameStarted && players.length > 0) {
+    return;
+  }
+  
+  // 单人游戏模式下的初始化
   // 创建牌组
   const deck = createDeck();
   
@@ -191,37 +1080,37 @@ function initializeGame() {
     tableCards = [initialTableCard];
   }
   
-  // 如果是多人游戏模式，给所有玩家发牌
-  if (gameStarted && players.length > 0) {
-    // 给每个玩家发8张牌
-    dealCards(shuffledDeck, players, 8);
-    
-    // 更新本地玩家手牌
-    const localPlayer = players.find(player => player.id === localPlayerId);
-    if (localPlayer) {
-      playerHand = localPlayer.cards;
+  // 单人游戏模式下，给玩家和AI各发8张牌
+  for (let i = 0; i < 8; i++) {
+    if (shuffledDeck.length > 0) {
+      playerHand.push(shuffledDeck.pop());
     }
     
-    // 如果是双人游戏，设置AI手牌
-    if (players.length === 2) {
-      const otherPlayer = players.find(player => player.id !== localPlayerId);
-      if (otherPlayer) {
-        aiHand = otherPlayer.cards || [];
-      } else {
-        aiHand = []; // 确保aiHand始终是一个数组
-      }
-    } else {
-      aiHand = []; // 如果不是双人游戏，确保aiHand是一个空数组
+    if (shuffledDeck.length > 0) {
+      aiHand.push(shuffledDeck.pop());
     }
-    
-    // 设置当前玩家
-    currentPlayerId = players[0].id;
-    currentTurn = currentPlayerId === localPlayerId ? 'player' : 'ai';
-  } else {
-    // 单人游戏模式，直接发牌给玩家和AI
-    playerHand = shuffledDeck.slice(0, 8);
-    aiHand = shuffledDeck.slice(8, 16);
   }
+  
+  // 如果是双人游戏，设置AI手牌
+  if (players.length === 2) {
+    const otherPlayer = players.find(player => player.id !== localPlayerId);
+    if (otherPlayer) {
+      aiHand = otherPlayer.cards || [];
+    } else {
+      aiHand = []; // 确保aiHand始终是一个数组
+    }
+  } else {
+    aiHand = []; // 如果不是双人游戏，确保aiHand是一个空数组
+  }
+  
+  // 设置当前玩家
+  currentPlayerId = players[0].id;
+  currentTurn = currentPlayerId === localPlayerId ? 'player' : 'ai';
+  // } else {
+  //   // 单人游戏模式，直接发牌给玩家和AI
+  //   playerHand = shuffledDeck.slice(0, 8);
+  //   aiHand = shuffledDeck.slice(8, 16);
+  // }
   
   // 更新UI
   updateGameInfo();
@@ -328,23 +1217,119 @@ function setupEventListeners() {
 }
 
 /**
+ * 发送消息到服务器
+ */
+function sendToServer(message) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  } else {
+    console.error('WebSocket连接未建立或已关闭');
+    showGameMessage('与服务器的连接已断开，请刷新页面重试', true);
+  }
+}
+
+/**
  * 设置多人游戏事件监听器
  */
 function setupMultiplayerEventListeners() {
   // 创建游戏按钮
-  createGameBtn.addEventListener('click', handleCreateGame);
+  createGameBtn.addEventListener('click', () => {
+    const playerName = playerNameInput.value.trim();
+    if (!playerName) {
+      alert('请输入你的名字');
+      return;
+    }
+    
+    localPlayerName = playerName;
+    
+    // 生成随机房间ID
+    const randomRoomId = 'room_' + Math.floor(Math.random() * 10000);
+    
+    // 初始化WebSocket连接
+    initializeWebSocket(playerName);
+    
+    // 连接成功后发送创建房间请求
+    const checkConnectionInterval = setInterval(() => {
+      if (isConnected) {
+        clearInterval(checkConnectionInterval);
+        
+        // 发送创建房间请求
+        sendToServer({
+          type: 'create_room',
+          roomId: randomRoomId,
+          playerName: playerName,
+          playerId: localPlayerId
+        });
+      }
+    }, 100);
+  });
   
   // 加入游戏按钮
-  joinGameBtn.addEventListener('click', handleJoinGameClick);
+  joinGameBtn.addEventListener('click', () => {
+    const playerName = playerNameInput.value.trim();
+    if (!playerName) {
+      alert('请输入你的名字');
+      return;
+    }
+    
+    localPlayerName = playerName;
+    
+    // 显示可用游戏列表
+    joinGamePanelElement.style.display = 'block';
+    
+    // 初始化WebSocket连接
+    initializeWebSocket(playerName);
+    
+    // 连接成功后获取房间列表
+    const checkConnectionInterval = setInterval(() => {
+      if (isConnected) {
+        clearInterval(checkConnectionInterval);
+        
+        // 发送获取房间列表请求
+        sendToServer({
+          type: 'get_rooms'
+        });
+      }
+    }, 100);
+  });
   
   // 刷新游戏列表按钮
-  refreshGamesBtn.addEventListener('click', refreshAvailableGames);
+  refreshGamesBtn.addEventListener('click', () => {
+    availableGamesElement.innerHTML = '<div class="player-list-item">正在搜索游戏...</div>';
+    
+    // 发送获取房间列表请求
+    sendToServer({
+      type: 'get_rooms'
+    });
+  });
   
   // 添加AI玩家按钮
-  document.getElementById('add-ai-btn').addEventListener('click', addAIPlayer);
+  document.getElementById('add-ai-btn').addEventListener('click', () => {
+    if (players.length >= 4) {
+      alert('房间已满');
+      return;
+    }
+    
+    // 发送添加AI玩家请求
+    sendToServer({
+      type: 'add_ai',
+      roomId: roomId
+    });
+  });
   
   // 开始游戏按钮
-  startGameBtn.addEventListener('click', handleStartGame);
+  startGameBtn.addEventListener('click', () => {
+    if (players.length < 2) {
+      alert('至少需要2名玩家才能开始游戏');
+      return;
+    }
+    
+    // 发送开始游戏请求
+    sendToServer({
+      type: 'start_game',
+      roomId: roomId
+    });
+  });
   
   // 游戏内按钮
   setupEventListeners();
@@ -503,9 +1488,20 @@ function showWaitingRoom() {
  * 更新已加入玩家列表
  */
 function updateJoinedPlayersList() {
-  joinedPlayersElement.innerHTML = '';
+  console.log('执行updateJoinedPlayersList函数');
+  console.log('joinedPlayersElement:', joinedPlayersElement);
+  console.log('当前players数组:', players);
   
-  players.forEach(player => {
+  if (!joinedPlayersElement) {
+    console.error('错误: joinedPlayersElement 元素不存在!');
+    return;
+  }
+  
+  joinedPlayersElement.innerHTML = '';
+  console.log('已清空joinedPlayersElement内容');
+  
+  players.forEach((player, index) => {
+    console.log(`处理玩家 ${index}:`, player);
     const playerItem = document.createElement('div');
     playerItem.className = 'player-list-item';
     playerItem.innerHTML = `
@@ -513,7 +1509,10 @@ function updateJoinedPlayersList() {
       <span class="connection-status connected"></span>
     `;
     joinedPlayersElement.appendChild(playerItem);
+    console.log(`已添加玩家 ${player.name} 到列表`);
   });
+  
+  console.log('updateJoinedPlayersList函数执行完毕，最终HTML:', joinedPlayersElement.innerHTML);
 }
 
 /**
@@ -557,7 +1556,13 @@ function handleStartGame() {
   if (!isHost || players.length < 2 || players.length > 4) return;
   
   // 隐藏设置面板，显示游戏界面
-  setupPanelElement.style.display = 'none';
+  // 不隐藏整个setupPanelElement，因为waitingRoomElement是它的子元素
+  // 隐藏设置面板中的其他元素
+  document.querySelectorAll('#setup-panel > *:not(#waiting-room)').forEach(el => {
+    if (el.id !== 'waiting-room') {
+      el.style.display = 'none';
+    }
+  });
   gameContainerElement.style.display = 'block';
   
   // 初始化游戏
@@ -611,7 +1616,25 @@ function updatePlayersListUI() {
  * @param {string} mode 出牌模式
  */
 function handlePlayMode(mode) {
-  if (currentTurn !== 'player' || gameOver) return;
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
+  
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果不是当前玩家的回合或游戏已结束，不允许选择出牌模式
+  if (!isPlayerTurn || gameOver) {
+    if (gameStarted && players.length > 0 && !gameOver) {
+      // 在多人游戏模式下显示错误提示
+      showGameMessage('错误：不是你的回合');
+    }
+    return;
+  }
   
   // 如果已经选择了牌，则执行出牌操作
   if (selectedCards.length > 0) {
@@ -654,7 +1677,25 @@ function handlePlayMode(mode) {
  * @param {number} index 卡牌在手牌中的索引
  */
 function handleCardSelection(card, index) {
-  if (currentTurn !== 'player' || gameOver) return;
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
+  
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果不是当前玩家的回合或游戏已结束，不允许选择卡牌
+  if (!isPlayerTurn || gameOver) {
+    if (gameStarted && players.length > 0 && !gameOver) {
+      // 在多人游戏模式下显示错误提示
+      showGameMessage('错误：不是你的回合');
+    }
+    return;
+  }
   
   // 检查是否符合当前出牌模式
   if (playMode === 'metro' && card.type !== CARD_TYPE.STATION) {
@@ -705,6 +1746,26 @@ function handleCardSelection(card, index) {
 function handlePlayerPlay() {
   if (selectedCards.length === 0) return;
   
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
+  
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果不是当前玩家的回合或游戏已结束，不允许出牌
+  if (!isPlayerTurn || gameOver) {
+    if (gameStarted && players.length > 0 && !gameOver) {
+      // 在多人游戏模式下显示错误提示
+      showGameMessage('错误：不是你的回合');
+    }
+    return;
+  }
+  
   // 获取选中的牌
   const cardsToPlay = selectedCards.map(c => c.card);
   
@@ -714,6 +1775,39 @@ function handlePlayerPlay() {
     return;
   }
   
+  // 如果是多人游戏模式，通过WebSocket发送出牌请求
+  if (gameStarted && players.length > 0) {
+    // 从玩家手牌中移除选中的牌
+    selectedCards.forEach(selected => {
+      const index = playerHand.findIndex(card => 
+        card.type === selected.card.type && 
+        (card.type !== CARD_TYPE.STATION || card.name === selected.card.name)
+      );
+      if (index !== -1) {
+        playerHand.splice(index, 1);
+      }
+    });
+    
+    // 发送出牌请求到服务器
+    sendToServer({
+      type: 'play_card',
+      roomId: roomId,
+      playerId: localPlayerId,
+      cards: cardsToPlay,
+      playMode: playMode
+    });
+    
+    // 清空选中的牌
+    selectedCards = [];
+    
+    // 更新UI
+    renderCards();
+    updateButtonStates();
+    
+    return;
+  }
+  
+  // 单人游戏模式下的处理逻辑
   // 处理特殊牌效果
   let effectMessage = '';
   let specialAction = false;
@@ -816,7 +1910,7 @@ function handlePlayerPlay() {
   renderCards();
   updateGameInfo();
   updatePlayersListUI(); // 更新玩家列表UI，显示正确的剩余牌数
-  updatePlayersListUI(); // 更新玩家列表UI，显示正确的剩余牌数
+  // updatePlayersListUI(); // 更新玩家列表UI，显示正确的剩余牌数
   
   // 检查游戏是否结束
   if (checkGameEnd()) return;
@@ -871,6 +1965,7 @@ function handlePlayerPlay() {
       // 重置标记
       window.metroCardPlayed = false;
       window.specialEffectPlayed = false;
+      window.taxiEffectActive = false;
       
       // 记录玩家的动作
       const lastAction = '结束了回合';
@@ -970,6 +2065,7 @@ function handlePlayerPlay() {
       // 重置标记
       window.metroCardPlayed = false;
       window.specialEffectPlayed = false;
+      window.taxiEffectActive = false;
       
       // 记录玩家的动作
       const lastAction = '结束了回合';
@@ -1200,7 +2296,6 @@ function handleAITurn() {
       console.log('桌面上没有足够的地铁站牌');
     }
   }
-  
   console.log('AI特殊行动状态:', aiSpecialAction);
   
   // 更新UI
@@ -1295,7 +2390,6 @@ function makeAIDecision() {
       };
     }
   }
-  
   // 2. 如果桌面上没有牌，选择数量最多的类型出牌
   if (stationCards.length >= taxiCards.length && stationCards.length >= busCards.length && stationCards.length > 0) {
     // 出一张地铁站牌
@@ -1360,7 +2454,7 @@ function isValidPlay(cards, mode) {
       if (window.taxiEffectActive && playMode === 'metro') {
         // 出租车/公交车特殊效果：可以出任意地铁站牌，不需要检查连通性
         // 但是限制只能出一张牌
-        if (cards.length > 1) {
+        if (cards.length > 1) { 
           return false; // 只能出一张牌
         }
         return true; // 跳过连通性检查
@@ -1391,16 +2485,34 @@ function isValidPlay(cards, mode) {
       }
     }
   }
-  
   return true;
 }
 
 /**
  * 通用摸牌函数，为玩家和AI提供统一的摸牌逻辑
  * @param {string} player 玩家类型 'player' 或 'ai'
+ * @param {Object} [specificCard] - 在多人游戏模式下，服务器指定的卡牌
  * @returns {Object} 摸到的牌
  */
-function drawCard(player) {
+function drawCard(player, specificCard = null) {
+  // 如果是多人游戏模式且提供了特定卡牌，直接使用该卡牌
+  if (gameStarted && players.length > 0 && specificCard) {
+    // 如果是多人游戏模式，更新对应玩家的手牌
+    if (player === 'player') {
+      const localPlayer = players.find(p => p.id === localPlayerId);
+      if (localPlayer && localPlayer.cards) {
+        localPlayer.cards.push(specificCard);
+      }
+    } else if (player === 'ai') {
+      const aiPlayer = players.find(p => p.id !== localPlayerId);
+      if (aiPlayer && aiPlayer.cards) {
+        aiPlayer.cards.push(specificCard);
+      }
+    }
+    
+    return specificCard;
+  }
+  
   // 创建一张随机牌，确保不会摸到已经打出的牌或弃牌堆的牌
   let newCard;
   let isCardValid = false;
@@ -1603,22 +2715,42 @@ function drawCard(player) {
  * 处理玩家摸牌
  */
 function handleDrawCard() {
-  if (currentTurn !== 'player' || gameOver) return;
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
   
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果不是当前玩家的回合或游戏已结束，不允许摸牌
+  if (!isPlayerTurn || gameOver) {
+    if (gameStarted && players.length > 0 && !gameOver) {
+      // 在多人游戏模式下显示错误提示
+      showGameMessage('错误：不是你的回合');
+    }
+    return;
+  }
+  
+  // 如果是多人游戏模式，通过WebSocket发送摸牌请求
+  if (gameStarted && players.length > 0) {
+    sendToServer({
+      type: 'draw_card',
+      roomId: roomId,
+      playerId: localPlayerId
+    });
+    return;
+  }
+  
+  // 单人游戏模式下的处理逻辑
   // 使用通用摸牌函数
   const newCard = drawCard('player');
   
-  // 将新牌添加到玩家手牌（仅在非多人游戏模式下）
-  // 在多人游戏模式下，牌已经在drawCard函数中添加到了localPlayer.cards
-  if (!(gameStarted && players.length > 0)) {
-    playerHand.push(newCard);
-  } else {
-    // 在多人模式下，确保playerHand和localPlayer.cards保持同步
-    const localPlayer = players.find(p => p.id === localPlayerId);
-    if (localPlayer) {
-      playerHand = localPlayer.cards;
-    }
-  }
+  // 将新牌添加到玩家手牌
+  playerHand.push(newCard);
   
   // 记录玩家的动作
   const lastAction = `摸了一张${newCard.type === CARD_TYPE.STATION ? '地铁站' : newCard.type === CARD_TYPE.TAXI ? '出租车' : '公交车'}牌`;
@@ -1626,7 +2758,6 @@ function handleDrawCard() {
   // 更新UI
   renderCards();
   updateGameInfo();
-  updatePlayersListUI(); // 更新玩家列表UI，显示正确的剩余牌数
   updatePlayersListUI(); // 更新玩家列表UI，显示正确的剩余牌数
   showGameMessage(lastAction);
   
@@ -1643,6 +2774,26 @@ function handleDrawCard() {
  * 取消选择
  */
 function cancelSelection() {
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
+  
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果不是当前玩家的回合或游戏已结束，不允许取消选择
+  if (!isPlayerTurn || gameOver) {
+    if (gameStarted && players.length > 0 && !gameOver) {
+      // 在多人游戏模式下显示错误提示
+      showGameMessage('错误：不是你的回合');
+    }
+    return;
+  }
+  
   // 取消所有选中的牌
   const selectedCardElements = document.querySelectorAll('.card.selected');
   selectedCardElements.forEach(element => {
@@ -1751,7 +2902,6 @@ function updateGameInfo() {
       aiCardsCountElement.textContent = `AI手牌: ${aiHand ? aiHand.length : 0}`;
     }
   }
-  
   // 计算牌堆剩余数量：总牌数减去玩家手牌、AI手牌和桌面牌
   // 地铁站牌数量 + 出租车牌(5) + 公交车牌(5) - 已使用的牌
   const stationCardCount = metroData.stations.filter(station => station.cardmode === 1).length;
@@ -1780,7 +2930,55 @@ function updateGameInfo() {
   }
   
   if (currentTurnElement) {
-    currentTurnElement.textContent = `当前回合: ${currentTurn === 'player' ? '玩家' : 'AI'}`;
+    if (gameStarted && players.length > 0) {
+      // 多人游戏模式：显示当前玩家的名称
+      
+      // 确保currentPlayerId已定义
+      if (!currentPlayerId && players.length > 0) {
+        // 如果currentPlayerId未定义但有玩家列表，设置为第一个玩家
+        currentPlayerId = players[0].id;
+      }
+      
+      const isLocalPlayer = currentPlayerId === localPlayerId;
+      
+      // 先检查是否是本地玩家的回合
+      if (isLocalPlayer) {
+        // 如果是本地玩家的回合
+        currentTurnElement.textContent = `当前回合: 你`;
+        currentTurnElement.classList.add('current-turn-highlight');
+        currentTurnElement.style.fontWeight = 'bold';
+        currentTurnElement.style.color = '#ff5722';
+      } else {
+        // 如果是其他玩家的回合，尝试获取玩家信息
+        const currentPlayer = players.find(p => p.id === currentPlayerId);
+        
+        if (currentPlayer) {
+          // 如果找到了玩家信息
+          currentTurnElement.textContent = `当前回合: ${currentPlayer.name}`;
+        } else {
+          // 如果找不到当前玩家信息，显示ID的一部分作为标识
+          const shortId = currentPlayerId ? currentPlayerId.substring(0, 8) : '未知';
+          currentTurnElement.textContent = `当前回合: 玩家(${shortId})`;
+        }
+        
+        currentTurnElement.classList.remove('current-turn-highlight');
+        currentTurnElement.style.fontWeight = 'normal';
+        currentTurnElement.style.color = '';
+      }
+    } else {
+      // 单人游戏模式：显示玩家或AI
+      currentTurnElement.textContent = `当前回合: ${currentTurn === 'player' ? '玩家' : 'AI'}`;
+      // 在单人模式下也添加高亮
+      if (currentTurn === 'player') {
+        currentTurnElement.classList.add('current-turn-highlight');
+        currentTurnElement.style.fontWeight = 'bold';
+        currentTurnElement.style.color = '#ff5722';
+      } else {
+        currentTurnElement.classList.remove('current-turn-highlight');
+        currentTurnElement.style.fontWeight = 'normal';
+        currentTurnElement.style.color = '';
+      }
+    }
   }
 }
 
@@ -1788,7 +2986,19 @@ function updateGameInfo() {
  * 更新按钮状态
  */
 function updateButtonStates() {
-  const isPlayerTurn = currentTurn === 'player' && !gameOver;
+  // 判断是否是当前玩家的回合
+  let isPlayerTurn = false;
+  
+  if (gameStarted && players.length > 0) {
+    // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
+    isPlayerTurn = currentPlayerId === localPlayerId;
+  } else {
+    // 单人游戏模式：使用currentTurn变量
+    isPlayerTurn = currentTurn === 'player';
+  }
+  
+  // 如果游戏结束，禁用所有按钮
+  isPlayerTurn = isPlayerTurn && !gameOver;
   
   // 检查玩家手牌中是否有各类型的牌
   const hasMetroCard = playerHand.some(card => card.type === CARD_TYPE.STATION);
@@ -1942,10 +3152,11 @@ function createCardElement(card, index) {
     const stationLinesElement = document.createElement('div');
     stationLinesElement.className = 'station-lines';
     
-    // 获取站点信息
-    const stationInfo = metroData.stations.find(s => s.name === card.name);
-    if (stationInfo && stationInfo.lines) {
-      stationInfo.lines.forEach(line => {
+    // 优先使用卡牌自带的线路信息，如果没有再从metroData中查找
+    const lines = card.lines || (metroData.stations.find(s => s.name === card.name)?.lines || []);
+    
+    if (lines && lines.length > 0) {
+      lines.forEach(line => {
         const lineTagElement = document.createElement('div');
         lineTagElement.className = 'line-tag';
         
@@ -2056,8 +3267,7 @@ function updateDebugInfo() {
   
   const decisionLogic = document.createElement('div');
   decisionLogic.innerHTML = `
-    <p>桌面最后一张牌: ${lastCardInfo}</p>
-    <p>当前回合: ${currentTurn === 'player' ? '玩家' : 'AI'}</p>
+    <p>桌面最后一张牌: ${lastCardInfo}</p>    <p>当前回合: ${currentTurn === 'player' ? '玩家' : 'AI'}</p>
     <p>游戏统计:</p>
     <ul>
       <li>总共出牌数: ${gameStats.totalCards}</li>
