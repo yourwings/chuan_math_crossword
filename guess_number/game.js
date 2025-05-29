@@ -119,6 +119,16 @@ function handleCellClick(event) {
         gameBoard[index].revealed = true;
         event.target.classList.add('revealed');
         
+        // 记录连续猜中的数字，用于检测生日彩蛋
+        consecutiveNumbers.push(value);
+        // 只保留最近的两个数字
+        if (consecutiveNumbers.length > 2) {
+            consecutiveNumbers.shift();
+        }
+        
+        // 检查是否连续猜中6和7（小川生日彩蛋）
+        checkBirthdayEggCondition();
+        
         // 双人模式下，记录格子归属
         if (gameMode === 'double') {
             gameBoard[index].owner = currentPlayer;
@@ -169,8 +179,6 @@ function handleCellClick(event) {
             }
         }, 900); // 延长显示时间，让玩家有更多时间看清数字
     }
-        
-
 }
 
 // 更新玩家回合显示
@@ -223,6 +231,14 @@ function endGame() {
     
     gameResultElement.innerHTML = resultText;
     gameOverModal.style.display = 'flex';
+    
+    // 检查是否需要显示生日彩蛋
+    if (birthdayEggTriggered) {
+        // 设置一个短暂的延迟，让玩家先看到游戏结果
+        setTimeout(() => {
+            window.location.href = '../birthday_surprise/index.html';
+        }, 2000);
+    }
 }
 
 // 格式化时间
@@ -352,3 +368,30 @@ returnHomeButton.addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
     restartButton.disabled = true;
 });
+
+// 添加检测连续猜中6和7的变量
+let consecutiveNumbers = [];
+let birthdayEggTriggered = false;
+
+// 检查是否满足生日彩蛋条件（连续猜中6和7）
+function checkBirthdayEggCondition() {
+    // 检查是否是小川生日（6月7日）
+    const today = new Date();
+    const isChauanBirthday = (today.getMonth() === 5 && today.getDate() === 7); // 月份从0开始，所以6月是5
+    
+    // 如果不是小川生日，不触发彩蛋
+    if (!isChauanBirthday) return false;
+    
+    // 检查是否连续猜中6和7
+    const isConsecutive67 = (consecutiveNumbers.length === 2 && 
+                           consecutiveNumbers[0] === 6 && 
+                           consecutiveNumbers[1] === 7);
+    
+    // 如果是小川生日且连续猜中6和7，标记彩蛋触发
+    if (isConsecutive67 && !birthdayEggTriggered) {
+        birthdayEggTriggered = true;
+        // 彩蛋将在游戏结束后显示
+    }
+    
+    return isConsecutive67;
+}

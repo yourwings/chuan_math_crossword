@@ -119,27 +119,9 @@
         </div>
         
         <div class="games-grid">
-            <div class="game-card" onclick="window.location.href='arithmetic_grid/index.html'">
-                <h3>小川算术格</h3>
-                <p>一款数学填字游戏，通过有趣的数学表达式填充来提高数学思维能力。</p>
-                <button class="play-button">开始游戏</button>
-            </div>
-            
-            <div class="game-card" data-game="sudoku" onclick="window.location.href='sudoku/index.html'">
-                <h3>小川数独</h3>
-                <p>经典九宫格数独游戏，锻炼逻辑思维能力。</p>
-                <button class="play-button">开始游戏</button>
-            </div>
-            
             <div class="game-card" onclick="window.location.href='sliding_puzzle/index.html'">
                 <h3>数字华容道</h3>
                 <p>结合数学元素的华容道游戏，通过移动数字块完成拼图。</p>
-                <button class="play-button">开始游戏</button>
-            </div>
-            
-            <div class="game-card" onclick="window.location.href='mental_arithmetic/index.html'">
-                <h3>口算练习</h3>
-                <p>快速口算练习游戏，提高心算能力和数学运算速度。</p>
                 <button class="play-button">开始游戏</button>
             </div>
             
@@ -149,9 +131,33 @@
                 <button class="play-button">开始游戏</button>
             </div>
             
+            <div class="game-card" onclick="window.location.href='arithmetic_grid/index.html'">
+                <h3>小川算术格</h3>
+                <p>一款数学填字游戏，通过有趣的数学表达式填充来提高数学思维能力。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" onclick="window.location.href='metro_wander/main.html'">
+                <h3>地铁漫游</h3>
+                <p>基于北京地铁线路的策略游戏，通过规划路线连接起点和终点站，锻炼空间思维和路径规划能力。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" data-game="sudoku" onclick="window.location.href='sudoku/index.html'">
+                <h3>小川数独</h3>
+                <p>经典九宫格数独游戏，锻炼逻辑思维能力。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
+            <div class="game-card" onclick="window.location.href='mental_arithmetic/index.html'">
+                <h3>口算练习</h3>
+                <p>快速口算练习游戏，提高心算能力和数学运算速度。</p>
+                <button class="play-button">开始游戏</button>
+            </div>
+            
             <div class="game-card" onclick="window.location.href='find_numbers/index.html'">
                 <h3>小川找数字</h3>
-                <p>在50x50的棋盘中按顺序找出1-99的数字，锻炼观察力和数字识别能力。</p>
+                <p>在18x18的棋盘中按顺序找出1-99的数字，锻炼观察力和数字识别能力。</p>
                 <button class="play-button">开始游戏</button>
             </div>
             
@@ -167,12 +173,6 @@
                 <button class="play-button">开始游戏</button>
             </div>
             
-            <div class="game-card" onclick="window.location.href='metro_wander/main.html'">
-                <h3>地铁漫游</h3>
-                <p>基于北京地铁线路的策略游戏，通过规划路线连接起点和终点站，锻炼空间思维和路径规划能力。</p>
-                <button class="play-button">开始游戏</button>
-            </div>
-            
             <div class="game-card" onclick="window.location.href='chuan_grocery_store/index.html'">
                 <h3>小川杂货店</h3>
                 <p>趣味购物计算游戏，通过模拟购物场景锻炼加减法和金额计算能力。</p>
@@ -181,7 +181,10 @@
         </div>
     </div>
     
-    <!-- 添加Service Worker注册脚本 -->
+    <!-- 引入生日彩蛋检测脚本 -->
+    <script src="birthday_checker.js"></script>
+    
+    <!-- Service Worker 注册 -->
     <script>
         // 注册Service Worker以支持离线访问
         if ('serviceWorker' in navigator) {
@@ -191,6 +194,14 @@
                     .catch(err => console.log('Service Worker 注册失败', err));
             });
         }
+        
+        // 页面加载完成后检查是否需要显示生日彩蛋
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化生日彩蛋检测器
+            if (window.birthdayChecker) {
+                window.birthdayChecker.init();
+            }
+        });
     </script>
 </body>
 </html>
