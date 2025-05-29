@@ -74,16 +74,6 @@ h1 {
     text-overflow: ellipsis; /* 文本溢出时显示省略号 */
     white-space: nowrap; /* 防止文本换行 */
 }
-    color: #4CAF50;
-    background-color: #e8f5e9;
-    border-left: 4px solid #4CAF50;
-    font-size: 18px;
-    padding: 10px 15px;
-    margin-top: 10px;
-    width: 100%;
-    text-align: center;
-    transition: all 0.3s ease;
-}
 
 .game-info {
     display: flex;
