@@ -233,6 +233,9 @@ function initializeWebSocket(playerName, roomIdParam = null) {
           case 'turn_ended':
             handleTurnEnded(data);
             break;
+          case 'metro_first_card_played':
+            handleMetroFirstCardPlayed(data);
+            break;
           case 'error':
             showGameMessage(`错误: ${data.message}`, true);
             break;
@@ -454,7 +457,27 @@ function handleCardPlayed(data) {
   tableCards = data.tableCards;
   
   // 更新当前玩家
-  currentPlayerId = data.currentPlayerId;
+  console.log('出牌前当前玩家ID:', currentPlayerId);
+  console.log('服务器返回的当前玩家ID:', data.currentPlayerId);
+  console.log('出牌模式:', data.playMode);
+  
+  // 更新当前玩家ID为服务器返回的值
+  // 如果是出租车牌特殊效果，不更新当前玩家ID，保持当前玩家不变
+  if (data.playMode === 'taxi') {
+    console.log('出租车牌特殊效果：保持当前玩家ID不变 =', currentPlayerId);
+  } else {
+    currentPlayerId = data.currentPlayerId;
+    console.log('更新后当前玩家ID:', currentPlayerId);
+  }
+  
+  // 如果是出租车牌，显示特殊提示
+  if (data.playMode === 'taxi') {
+    console.log('出租车牌特殊效果：当前玩家ID =', currentPlayerId);
+    // 如果当前玩家是本地玩家，显示提示
+    if (currentPlayerId === localPlayerId) {
+      showGameMessage('现在是你的回合，可以出一张地铁站牌或结束回合');
+    }
+  }
   
   // 如果是其他玩家出的牌，更新他们的手牌数量
   const playerIndex = players.findIndex(p => p.id === data.playerId);
@@ -494,13 +517,33 @@ function handleCardPlayed(data) {
     case 'taxi':
       cardTypeText = '出租车牌';
       // 出租车牌特殊效果：出牌后摸一张牌并可选择打出一张地铁牌
+      // 确保window.specialEffectPlayed和window.taxiEffectActive已定义
+      if (window.specialEffectPlayed === undefined) {
+        window.specialEffectPlayed = false;
+        console.log('初始化window.specialEffectPlayed为false');
+      }
+      if (window.taxiEffectActive === undefined) {
+        window.taxiEffectActive = false;
+        console.log('初始化window.taxiEffectActive为false');
+      }
+      
+      // 无论是谁出的出租车牌，都设置出租车特殊效果标记和特殊效果已播放标记
+      window.taxiEffectActive = true;
+      window.specialEffectPlayed = true;
+      console.log('出租车特殊效果已触发，设置window.taxiEffectActive =', window.taxiEffectActive);
+      console.log('出租车特殊效果已触发，设置window.specialEffectPlayed =', window.specialEffectPlayed);
+      
+      // 添加特殊效果标记到服务器返回的数据中，确保客户端能正确识别
+      if (!data.specialEffect) {
+        data.specialEffect = 'taxi';
+        console.log('添加specialEffect到服务器返回的数据:', data.specialEffect);
+      }
+      
+      // 如果是本地玩家出的出租车牌，设置特殊行动和特殊效果标记
       if (data.playerId === localPlayerId) {
         effectMessage = '出租车可以连接任意两个地铁站！摸一张牌后可以选择打出一张地铁牌';
         specialAction = true;
-        // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
-        window.specialEffectPlayed = true;
-        window.taxiEffectActive = true; // 设置出租车特殊效果标记
-        console.log('出租车特殊效果已触发，specialAction =', specialAction);
+        console.log('本地玩家出租车特殊效果已触发，specialAction =', specialAction);
       }
       break;
     case 'bus':
@@ -523,6 +566,11 @@ function handleCardPlayed(data) {
             effectMessage = `公交车将${secondLastStation.name}站移到了牌堆末尾！可以选择打出一张地铁牌`;
             specialAction = true; // 公交车也设置为特殊行动，允许继续出一张地铁牌
             console.log('公交车特殊效果已触发，specialAction =', specialAction);
+            // 确保window.specialEffectPlayed已定义，如果未定义则初始化为false
+            if (window.specialEffectPlayed === undefined) {
+              window.specialEffectPlayed = false;
+              console.log('初始化window.specialEffectPlayed为false');
+            }
             // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
             window.specialEffectPlayed = true;
           } else {
@@ -542,7 +590,12 @@ function handleCardPlayed(data) {
   
   // 检查是否是特殊效果后的出牌（只能出一张）
   let isSpecialEffectPlay = false;
-  if (window.specialEffectPlayed && data.playMode === 'metro' && data.playerId === localPlayerId) {
+  // 确保window.specialEffectPlayed已定义，如果未定义则初始化为false
+  if (window.specialEffectPlayed === undefined) {
+    window.specialEffectPlayed = false;
+    console.log('初始化window.specialEffectPlayed为false');
+  }
+  if (window.specialEffectPlayed && data.playMode === 'metro') {
     // 标记这是特殊效果后的出牌
     isSpecialEffectPlay = true;
     // 重置特殊效果标记
@@ -560,62 +613,191 @@ function handleCardPlayed(data) {
   }
   
   // 处理特殊效果
-  if (specialAction && data.playerId === localPlayerId) {
+  if (specialAction || data.specialEffect === 'taxi') {
     console.log('进入特殊行动处理流程');
+    console.log('出牌玩家ID:', data.playerId);
+    console.log('本地玩家ID:', localPlayerId);
+    console.log('当前回合玩家ID:', currentPlayerId);
+    console.log('特殊效果标记:', data.specialEffect);
     
     // 如果是出租车，先摸一张牌
-    if (data.playMode === 'taxi') {
-      // 发送摸牌请求到服务器
-      sendToServer({
-        type: 'draw_card',
-        roomId: roomId
-      });
+    if (data.playMode === 'taxi' || data.specialEffect === 'taxi') {
+      // ===== 调试断点：出租车牌处理 =====
+      console.log('===== 客户端 handleCardPlayed 出租车牌处理调试断点 =====');
+      console.log('当前时间:', new Date().toISOString());
+      console.log('出牌玩家ID:', data.playerId);
+      console.log('本地玩家ID:', localPlayerId);
+      console.log('当前回合玩家ID:', currentPlayerId);
+      console.log('出牌模式:', data.playMode);
+      console.log('特殊效果标记:', data.specialEffect);
+      console.log('是否是当前玩家出的出租车牌:', data.playerId === localPlayerId);
+      console.log('是否是本地玩家的回合:', currentPlayerId === localPlayerId);
+      console.log('window.taxiEffectActive:', window.taxiEffectActive);
+      console.log('window.specialEffectPlayed:', window.specialEffectPlayed);
+      // ===== 调试断点结束 =====
       
-      // 显示提示消息
-      showGameMessage('出租车效果：摸了一张牌，可以选择打出一张地铁站牌或结束回合');
+      // 设置全局出租车效果标记，无论是谁出的出租车牌
+      window.taxiEffectActive = true;
+      window.specialEffectPlayed = true; // 设置特殊效果已播放标记
+      console.log('出租车效果：设置 window.taxiEffectActive =', window.taxiEffectActive);
+      console.log('出租车效果：设置 window.specialEffectPlayed =', window.specialEffectPlayed);
+      
+      // 显示出租车效果提示消息
+      const playerName = players.find(p => p.id === data.playerId)?.name || '其他玩家';
+      showGameMessage(`${playerName} 出了出租车牌，特殊效果激活`);
+      
+      // 如果是当前玩家出的出租车牌，发送摸牌请求
+      if (data.playerId === localPlayerId) {
+        console.log('1本地玩家出了出租车牌，发送摸牌请求');
+        // 发送摸牌请求到服务器，并标记这是出租车特殊效果
+        const drawCardRequest = {
+          type: 'draw_card',
+          roomId: roomId,
+          specialEffect: 'taxi' // 添加标记，告诉服务器这是出租车特殊效果下的摸牌
+        };
+        
+        console.log('本地玩家出租车牌，发送摸牌请求:', JSON.stringify(drawCardRequest));
+        sendToServer(drawCardRequest);
+        
+        // 显示提示消息
+        showGameMessage('出租车效果：摸了一张牌，可以选择打出一张地铁站牌或结束回合');
+      } else {
+        // 如果是其他玩家出的出租车牌
+        console.log('其他玩家出了出租车牌:', playerName);
+        showGameMessage(`${playerName} 出了出租车牌，正在摸牌...`);
+        
+        // 检查当前玩家是否是本地玩家
+        if (currentPlayerId === localPlayerId) {
+          console.log('出租车牌特殊效果：当前玩家是本地玩家，显示提示');
+          showGameMessage('现在是你的回合，等待对方摸牌后，你可以出一张地铁站牌或结束回合');
+          
+          // 重要：如果当前玩家是本地玩家，但出牌的是其他玩家，说明服务器没有切换玩家
+          // 这种情况下，我们需要自动发送摸牌请求，并带上出租车特殊效果标记
+          console.log('非房主出出租车牌，自动发送带特殊效果的摸牌请求');
+          
+          // 延迟发送摸牌请求，确保服务器有足够时间处理前一个请求
+          setTimeout(() => {
+            console.log('===== 延时执行：非房主出出租车牌后的摸牌请求 =====');
+            console.log('当前时间:', new Date().toISOString());
+            console.log('出牌玩家ID:', data.playerId);
+            console.log('本地玩家ID:', localPlayerId);
+            console.log('当前回合玩家ID:', currentPlayerId);
+            console.log('出牌模式:', data.playMode);
+            console.log('特殊效果标记:', data.specialEffect);
+            
+            // 检查当前状态
+            console.log('延迟执行前 - window.taxiEffectActive:', window.taxiEffectActive);
+            console.log('延迟执行前 - window.specialEffectPlayed:', window.specialEffectPlayed);
+            
+            // 确保window.taxiEffectActive为true，并设置为全局变量
+            window.taxiEffectActive = true;
+            window.specialEffectPlayed = true;
+            console.log('设置window.taxiEffectActive =', window.taxiEffectActive);
+            console.log('设置window.specialEffectPlayed =', window.specialEffectPlayed);
+            
+            // 构建请求对象并确保包含specialEffect参数
+            const drawCardRequest = {
+              type: 'draw_card',
+              roomId: roomId,
+              specialEffect: 'taxi' // 添加标记，告诉服务器这是出租车特殊效果下的摸牌
+            };
+            
+            console.log('===== 构建摸牌请求 =====');
+            console.log('非房主出出租车牌，发送摸牌请求:', JSON.stringify(drawCardRequest));
+            console.log('drawCardRequest对象的所有属性名:', Object.keys(drawCardRequest));
+            console.log('specialEffect的值:', drawCardRequest.specialEffect);
+            console.log('specialEffect的类型:', typeof drawCardRequest.specialEffect);
+            console.log('drawCardRequest中是否包含specialEffect属性:', drawCardRequest.hasOwnProperty('specialEffect'));
+            
+            // 使用sendToServer函数发送请求，确保一致性
+            console.log('===== 使用sendToServer函数发送请求 =====');
+            sendToServer(drawCardRequest);
+            
+            // 同时直接使用socket.send发送请求，确保所有属性都被正确传递
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              console.log('===== 使用socket.send发送请求 =====');
+              console.log('WebSocket状态:', socket.readyState);
+              console.log('WebSocket.OPEN值:', WebSocket.OPEN);
+              
+              const jsonString = JSON.stringify(drawCardRequest);
+              console.log('使用socket.send发送的JSON字符串:', jsonString);
+              console.log('JSON字符串长度:', jsonString.length);
+              console.log('JSON字符串是否包含"specialEffect":', jsonString.includes('"specialEffect"'));
+              socket.send(jsonString);
+              
+              // 保存最后一次发送的摸牌请求，用于调试
+              window.lastDrawCardRequest = drawCardRequest;
+              console.log('保存最后一次发送的摸牌请求:', JSON.stringify(window.lastDrawCardRequest));
+              console.log('window.lastDrawCardRequest.specialEffect:', window.lastDrawCardRequest.specialEffect);
+              
+              // 确保window.specialEffectPlayed设置为true
+              window.specialEffectPlayed = true;
+              console.log('设置window.specialEffectPlayed =', window.specialEffectPlayed);
+            } else {
+              console.error('WebSocket连接未建立或已关闭');
+              console.error('WebSocket状态:', socket ? socket.readyState : 'socket未定义');
+              showGameMessage('与服务器的连接已断开，请刷新页面重试', true);
+            }
+          }, 500);
+          
+          // 不要在这里创建结束回合按钮，而是在handleCardDrawn中创建
+          // 这样可以确保在摸牌后才显示结束回合按钮
+        }
+      }
     } else if (data.playMode === 'bus') {
       // 公交车效果已经在前面处理过了
       showGameMessage('公交车效果已生效，可以选择打出一张地铁站牌或结束回合');
     }
     
-    // 移除所有可能已存在的结束回合按钮
-    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
-    allEndTurnBtns.forEach(btn => btn.remove());
+    // 只有当前玩家出牌时才创建结束回合按钮，且不是出租车特殊效果时
+    if (data.playerId === localPlayerId && data.playMode !== 'taxi') {
     
-    // 创建结束回合按钮
-    const endTurnBtn = document.createElement('button');
-    endTurnBtn.id = 'end-turn-btn';
-    endTurnBtn.className = 'action-button';
-    endTurnBtn.textContent = '结束回合';
-    // 使用id选择器确保添加到正确的按钮容器中
-    document.getElementById('action-buttons').appendChild(endTurnBtn);
-    console.log('创建了结束回合按钮');
-    
-    // 添加结束回合按钮点击事件
-    endTurnBtn.addEventListener('click', () => {
-      // 移除结束回合按钮
-      endTurnBtn.remove();
+      // 移除所有可能已存在的结束回合按钮
+      const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+      allEndTurnBtns.forEach(btn => btn.remove());
       
-      // 重置标记
-      window.metroCardPlayed = false;
-      window.specialEffectPlayed = false;
-      window.taxiEffectActive = false;
+      // 创建结束回合按钮
+      const endTurnBtn = document.createElement('button');
+      endTurnBtn.id = 'end-turn-btn';
+      endTurnBtn.className = 'action-button';
+      endTurnBtn.textContent = '结束回合';
+      // 使用id选择器确保添加到正确的按钮容器中
+      document.getElementById('action-buttons').appendChild(endTurnBtn);
+      console.log('创建了结束回合按钮');
       
-      // 发送结束回合请求到服务器
-      sendToServer({
-        type: 'end_turn',
-        roomId: roomId
+      // 添加结束回合按钮点击事件
+      endTurnBtn.addEventListener('click', () => {
+        // 移除结束回合按钮
+        endTurnBtn.remove();
+        
+        // 重置标记
+        window.metroCardPlayed = false;
+        window.specialEffectPlayed = false;
+        window.taxiEffectActive = false;
+        
+        // 发送结束回合请求到服务器
+        sendToServer({
+          type: 'end_turn',
+          roomId: roomId
+        });
+        
+        showGameMessage('结束了回合');
       });
-      
-      showGameMessage('结束了回合');
-    });
+    }
     
     // 设置出牌模式为地铁，并标记这是特殊效果后的出牌（只能出一张）
     playMode = 'metro';
+    // 确保window.specialEffectPlayed已定义，如果未定义则初始化为false
+    if (window.specialEffectPlayed === undefined) {
+      window.specialEffectPlayed = false;
+      console.log('初始化window.specialEffectPlayed为false');
+    }
     // 添加一个标记，表示这是特殊效果后的出牌，只能出一张
     window.specialEffectPlayed = true;
     // 修改提示信息，明确告知玩家只能出一张地铁牌
-    showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
+    if (data.playerId === localPlayerId) {
+      showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
+    }
     updateButtonStates();
   } else if (data.playMode === 'metro' && data.playerId === localPlayerId) {
     // 如果是地铁牌，允许玩家选择出第二张地铁牌或结束回合
@@ -711,18 +893,31 @@ function handleCardPlayed(data) {
       // 重置标记
       window.metroCardPlayed = false;
       
+      // 重置出牌模式
+      playMode = null;
+      console.log('出完第二张地铁牌，重置playMode为null');
+      
       // 发送结束回合请求到服务器
       sendToServer({
         type: 'end_turn',
         roomId: roomId
       });
       
-      showGameMessage('已出过地铁牌，自动结束回合');
+      showGameMessage('已出第二张地铁牌，自动结束回合');
       return;
     }
     
     // 标记已经出过一张地铁牌
     window.metroCardPlayed = true;
+    console.log('出了第一张地铁牌，设置window.metroCardPlayed =', window.metroCardPlayed);
+    
+    // 防止服务器自动切换回合，发送一个特殊消息告知服务器当前玩家的回合还没有结束
+    sendToServer({
+      type: 'metro_first_card',
+      roomId: roomId,
+      playerId: localPlayerId
+    });
+    console.log('发送metro_first_card消息，防止回合自动结束');
     
     // 移除所有可能存在的结束回合按钮
     const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
@@ -754,6 +949,15 @@ function handleCardPlayed(data) {
     });
     
     showGameMessage('可以选择打出第二张地铁站牌或结束回合');
+  } else if (data.playMode === 'metro' && window.metroCardPlayed && data.playerId !== localPlayerId) {
+    // 如果是其他玩家出的第二张地铁牌，显示相应消息
+    const playerName = players.find(p => p.id === data.playerId)?.name || '玩家';
+    // 不使用 lastAction 参数，避免显示"上一步: true"
+    showGameMessage(`${playerName} 出了第二张地铁牌`);
+    
+    // 重置出牌模式，确保下一个玩家不受限制
+    playMode = null;
+    console.log('其他玩家出了第二张地铁牌，重置playMode为null');
   }
 }
 
@@ -764,10 +968,32 @@ function handleTurnEnded(data) {
   // 更新当前玩家ID
   currentPlayerId = data.currentPlayerId;
   
+  // 确保所有特殊效果标记已定义
+  if (window.metroCardPlayed === undefined) {
+    window.metroCardPlayed = false;
+    console.log('初始化window.metroCardPlayed为false');
+  }
+  if (window.specialEffectPlayed === undefined) {
+    window.specialEffectPlayed = false;
+    console.log('初始化window.specialEffectPlayed为false');
+  }
+  if (window.taxiEffectActive === undefined) {
+    window.taxiEffectActive = false;
+    console.log('初始化window.taxiEffectActive为false');
+  }
+  
   // 清除所有特殊效果标记
   window.metroCardPlayed = false;
+  
+  // 重置出牌模式，确保下一个玩家不受限制
+  playMode = null;
+  console.log('回合结束，重置playMode为null');
   window.specialEffectPlayed = false;
   window.taxiEffectActive = false;
+  
+  // 重置出牌模式
+  playMode = null;
+  console.log('回合结束，重置playMode为null');
   
   // 移除所有可能存在的结束回合按钮
   const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
@@ -792,17 +1018,72 @@ function handleTurnEnded(data) {
 }
 
 /**
+ * 处理地铁牌第一张牌的特殊消息
+ */
+function handleMetroFirstCardPlayed(data) {
+  // 获取出牌玩家信息
+  const player = players.find(p => p.id === data.playerId);
+  const playerName = player ? player.name : '玩家';
+  
+  // 如果是当前玩家出的第一张地铁牌，更新状态
+  if (data.playerId === localPlayerId) {
+    // 标记已经出过一张地铁牌
+    window.metroCardPlayed = true;
+    console.log('收到metro_first_card_played消息，设置window.metroCardPlayed =', window.metroCardPlayed);
+    
+    // 显示消息
+    showGameMessage('你出了第一张地铁牌，可以继续出第二张或结束回合');
+  } else {
+    // 显示其他玩家出了第一张地铁牌的消息
+    showGameMessage(`${playerName} 出了第一张地铁牌，可以继续出第二张或结束回合`);
+  }
+  
+  // 更新按钮状态
+  updateButtonStates();
+}
+
+/**
  * 处理玩家摸牌消息（其他玩家摸牌）
  */
 function handlePlayerDrewCard(data) {
+  console.log('收到其他玩家摸牌消息:', JSON.stringify(data));
+  
+  // 检查是否是出租车特殊效果摸的牌
+  const isTaxiEffect = data.specialEffect === 'taxi';
+  
+  if (isTaxiEffect) {
+    console.log('出租车特殊效果：其他玩家摸了一张牌，不切换回合');
+    
+    // 更新游戏信息，确保UI显示正确的当前回合玩家
+    updateGameInfo();
+    
+    // 更新玩家列表UI
+    updatePlayersListUI();
+    
+    // 更新按钮状态
+    updateButtonStates();
+    
+    // 显示摸牌消息，但不提示回合结束
+    const playerName = players.find(p => p.id === data.playerId)?.name || '玩家';
+    showGameMessage(`${playerName} 使用出租车效果摸了一张牌，可以继续出一张地铁站牌`);
+    
+    return;
+  }
+  
   // 保存之前的当前玩家ID，用于显示回合结束消息
   const previousPlayerId = data.playerId;
   const previousPlayerName = players.find(p => p.id === previousPlayerId)?.name || '玩家';
   
+  console.log('其他玩家摸牌：准备切换回合，之前玩家ID:', previousPlayerId);
+  
   // 更新当前玩家
   currentPlayerId = data.currentPlayerId;
+  console.log('更新当前玩家ID为:', currentPlayerId);
+  
   const currentPlayerName = players.find(p => p.id === currentPlayerId)?.name || '玩家';
   const isLocalPlayerTurn = currentPlayerId === localPlayerId;
+  
+  console.log('其他玩家摸牌：切换回合，新的当前玩家ID:', currentPlayerId);
   
   // 更新牌堆剩余数量
   deckCountElement.textContent = `牌堆剩余: ${data.remainingDeckCount}`;
@@ -838,6 +1119,8 @@ function handlePlayerDrewCard(data) {
  * 处理摸牌消息（当前玩家摸牌）
  */
 function handleCardDrawn(data) {
+  console.log('收到摸牌消息:', JSON.stringify(data));
+  
   // 使用drawCard函数处理服务器发送的卡牌
   drawCard('player', data.card);
   
@@ -847,8 +1130,74 @@ function handleCardDrawn(data) {
   // 渲染卡牌
   renderCards();
   
+  // 检查是否是出租车特殊效果摸的牌
+  const isTaxiEffect = data.specialEffect === 'taxi';
+  
+  if (isTaxiEffect) {
+    console.log('出租车特殊效果：摸了一张牌，不切换回合');
+    
+    // 设置出租车效果激活标记
+    window.taxiEffectActive = true;
+    window.specialEffectPlayed = true; // 确保特殊效果标记被设置
+    
+    console.log('设置window.taxiEffectActive =', window.taxiEffectActive);
+    console.log('设置window.specialEffectPlayed =', window.specialEffectPlayed);
+    
+    // 更新游戏信息，确保UI显示正确的当前回合玩家
+    updateGameInfo();
+    
+    // 更新玩家列表UI
+    updatePlayersListUI();
+    
+    // 更新按钮状态
+    updateButtonStates();
+    
+    // 显示摸牌消息
+    showGameMessage('你使用出租车牌摸了一张牌，可以继续出一张地铁站牌');
+    
+    // 移除所有可能已存在的结束回合按钮
+    const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
+    allEndTurnBtns.forEach(btn => btn.remove());
+    
+    // 创建结束回合按钮
+    const endTurnBtn = document.createElement('button');
+    endTurnBtn.id = 'end-turn-btn';
+    endTurnBtn.className = 'action-button';
+    endTurnBtn.textContent = '结束回合';
+    document.getElementById('action-buttons').appendChild(endTurnBtn);
+    
+    // 添加结束回合按钮点击事件
+    endTurnBtn.addEventListener('click', () => {
+      // 移除结束回合按钮
+      endTurnBtn.remove();
+      
+      // 重置标记
+      window.metroCardPlayed = false;
+      window.specialEffectPlayed = false;
+      window.taxiEffectActive = false;
+      
+      console.log('重置window.metroCardPlayed =', window.metroCardPlayed);
+      console.log('重置window.specialEffectPlayed =', window.specialEffectPlayed);
+      console.log('重置window.taxiEffectActive =', window.taxiEffectActive);
+      
+      // 发送结束回合请求到服务器
+      sendToServer({
+        type: 'end_turn',
+        roomId: roomId
+      });
+      
+      showGameMessage('结束了回合');
+    });
+    
+    // 设置出牌模式为地铁，并标记这是特殊效果后的出牌（只能出一张）
+    playMode = 'metro';
+    
+    return;
+  }
+  
   // 保存当前玩家ID（即摸牌的玩家，也就是本地玩家）
   const previousPlayerId = localPlayerId;
+  console.log('普通摸牌：准备切换回合，当前玩家ID:', previousPlayerId);
   
   // 计算下一个玩家ID（服务器不会在card_drawn消息中发送currentPlayerId）
   // 找到当前玩家在players数组中的索引
@@ -857,6 +1206,8 @@ function handleCardDrawn(data) {
   const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
   // 更新当前玩家ID为下一个玩家
   currentPlayerId = players[nextPlayerIndex].id;
+  
+  console.log('普通摸牌：切换回合，新的当前玩家ID:', currentPlayerId);
   
   // 获取下一个玩家的名称
   const nextPlayer = players[nextPlayerIndex];
@@ -1758,7 +2109,8 @@ function handlePlayerPlay() {
   }
   
   // 如果不是当前玩家的回合或游戏已结束，不允许出牌
-  if (!isPlayerTurn || gameOver) {
+  // 但是如果是出第二张地铁牌的特殊情况或出租车特殊效果激活，则允许出牌
+  if ((!isPlayerTurn && !window.metroCardPlayed && !window.taxiEffectActive) || gameOver) {
     if (gameStarted && players.length > 0 && !gameOver) {
       // 在多人游戏模式下显示错误提示
       showGameMessage('错误：不是你的回合');
@@ -1981,6 +2333,11 @@ function handlePlayerPlay() {
     
     // 设置出牌模式为地铁，并标记这是特殊效果后的出牌（只能出一张）
     playMode = 'metro';
+    // 确保window.specialEffectPlayed已定义，如果未定义则初始化为false
+    if (window.specialEffectPlayed === undefined) {
+      window.specialEffectPlayed = false;
+      console.log('初始化window.specialEffectPlayed为false');
+    }
     // 添加一个标记，表示这是特殊效果后的出牌，只能出一张
     window.specialEffectPlayed = true;
     // 修改提示信息，明确告知玩家只能出一张地铁牌
@@ -2715,21 +3072,26 @@ function drawCard(player, specificCard = null) {
  * 处理玩家摸牌
  */
 function handleDrawCard() {
+  console.log('===== 客户端 handleDrawCard 调试断点 =====');
+  
   // 判断是否是当前玩家的回合
   let isPlayerTurn = false;
   
   if (gameStarted && players.length > 0) {
     // 多人游戏模式：检查当前玩家ID是否是本地玩家ID
     isPlayerTurn = currentPlayerId === localPlayerId;
+    console.log('多人游戏模式 - isPlayerTurn:', isPlayerTurn);
   } else {
     // 单人游戏模式：使用currentTurn变量
     isPlayerTurn = currentTurn === 'player';
+    console.log('单人游戏模式 - isPlayerTurn:', isPlayerTurn);
   }
   
   // 如果不是当前玩家的回合或游戏已结束，不允许摸牌
   if (!isPlayerTurn || gameOver) {
     if (gameStarted && players.length > 0 && !gameOver) {
       // 在多人游戏模式下显示错误提示
+      console.log('错误：不是你的回合');
       showGameMessage('错误：不是你的回合');
     }
     return;
@@ -2737,11 +3099,67 @@ function handleDrawCard() {
   
   // 如果是多人游戏模式，通过WebSocket发送摸牌请求
   if (gameStarted && players.length > 0) {
-    sendToServer({
+    console.log('===== 多人游戏模式摸牌处理 =====');
+    console.log('当前时间:', new Date().toISOString());
+    console.log('当前玩家ID:', currentPlayerId);
+    console.log('本地玩家ID:', localPlayerId);
+    console.log('是否是房主:', isHost);
+    
+    // 清除上一次可能存在的lastDrawCardRequest，避免复用旧的specialEffect
+    window.lastDrawCardRequest = null;
+    console.log('已清除window.lastDrawCardRequest');
+    
+    // 构建全新的请求对象
+    const drawCardRequest = {
       type: 'draw_card',
-      roomId: roomId,
-      playerId: localPlayerId
-    });
+      roomId: roomId
+    };
+    
+    // 检查是否处于出租车特殊效果状态 - 只使用window变量，不使用localStorage
+    const isTaxiEffect = window.taxiEffectActive === true;
+    console.log('window.taxiEffectActive:', window.taxiEffectActive);
+    console.log('isTaxiEffect判断结果:', isTaxiEffect);
+    
+    // 只有在确实处于出租车特效状态时才添加specialEffect参数
+    if (isTaxiEffect) {
+      drawCardRequest.specialEffect = 'taxi';
+      console.log('添加specialEffect=taxi到摸牌请求，当前处于出租车特效状态');
+    }
+    
+    // 发送请求
+    console.log('发送摸牌请求:', JSON.stringify(drawCardRequest));
+    console.log('请求中是否包含specialEffect属性:', drawCardRequest.hasOwnProperty('specialEffect'));
+    console.log('请求对象的所有属性名:', Object.keys(drawCardRequest));
+    
+    // 使用socket.send发送请求
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      // 直接发送请求对象的JSON字符串，避免引用问题
+      const requestJson = JSON.stringify(drawCardRequest);
+      console.log('发送的JSON字符串:', requestJson);
+      console.log('JSON字符串是否包含"specialEffect":', requestJson.includes('"specialEffect"'));
+      socket.send(requestJson);
+      
+      // 保存当前请求的副本，用于调试 - 使用深拷贝
+      window.lastDrawCardRequest = JSON.parse(requestJson);
+      console.log('保存的lastDrawCardRequest:', JSON.stringify(window.lastDrawCardRequest));
+      
+      // 如果这次请求包含了specialEffect=taxi，则在发送后清除标记
+      // 这样可以确保出租车效果只使用一次
+      if (isTaxiEffect) {
+        console.log('出租车效果已使用，清除相关标记');
+        // 清除window变量
+        window.taxiEffectActive = false;
+        window.specialEffectPlayed = false;
+        console.log('清除后的window.taxiEffectActive:', window.taxiEffectActive);
+        
+        // 添加验证日志
+        console.log('验证清除是否成功 - window.taxiEffectActive:', window.taxiEffectActive);
+        console.log('验证清除是否成功 - window.specialEffectPlayed:', window.specialEffectPlayed);
+      }
+    } else {
+      console.error('WebSocket连接未建立或已关闭');
+      showGameMessage('与服务器的连接已断开，请刷新页面重试', true);
+    }
     return;
   }
   
@@ -3012,14 +3430,21 @@ function updateButtonStates() {
   }
   
   // 出牌按钮状态
+  // 检查是否是特殊效果状态（出租车效果或已出过一张地铁牌）
+  const isSpecialEffect = window.taxiEffectActive || window.metroCardPlayed;
+  
   if (selectedCards.length > 0) {
     // 如果已选择牌，只启用对应类型的按钮
-    playMetroBtn.disabled = !(isPlayerTurn && selectedCardType === CARD_TYPE.STATION);
+    // 在特殊效果状态下，即使不是玩家回合也允许出牌
+    playMetroBtn.disabled = !((isPlayerTurn || isSpecialEffect) && selectedCardType === CARD_TYPE.STATION);
+    // 出租车和公交车按钮仍然需要是玩家回合才能启用
     playTaxiBtn.disabled = !(isPlayerTurn && selectedCardType === CARD_TYPE.TAXI);
     playBusBtn.disabled = !(isPlayerTurn && selectedCardType === CARD_TYPE.BUS);
   } else {
     // 如果未选择牌，根据手牌中是否有对应类型的牌来启用按钮
-    playMetroBtn.disabled = !isPlayerTurn || (playMode !== null && playMode !== 'metro') || !hasMetroCard;
+    // 在特殊效果状态下，如果是出租车效果，允许出地铁牌
+    playMetroBtn.disabled = !(isPlayerTurn || (window.taxiEffectActive && playMode === 'metro')) || (playMode !== null && playMode !== 'metro') || !hasMetroCard;
+    // 出租车和公交车按钮仍然需要是玩家回合才能启用
     playTaxiBtn.disabled = !isPlayerTurn || (playMode !== null && playMode !== 'taxi') || !hasTaxiCard;
     playBusBtn.disabled = !isPlayerTurn || (playMode !== null && playMode !== 'bus') || !hasBusCard;
   }
@@ -3037,8 +3462,8 @@ function updateButtonStates() {
  * @param {string} [lastAction] 上一位玩家的行动信息
  */
 function showGameMessage(message, lastAction) {
-  // 如果提供了上一位玩家的行动信息，添加到消息前面并使用不同样式
-  if (lastAction) {
+  // 如果提供了上一位玩家的行动信息，且不是布尔值true，添加到消息前面并使用不同样式
+  if (lastAction && typeof lastAction === 'string') {
     // 清空原有内容
     gameMessageElement.innerHTML = '';
     

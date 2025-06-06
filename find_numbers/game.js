@@ -169,6 +169,21 @@ function handleCellClick(event) {
         return;
     }
     
+    // 如果已经选中了一个格子，检查新选择的格子是否与之相邻
+    if (selectedCells.length === 1) {
+        const firstCell = selectedCells[0];
+        const isAdjacent = (
+            (firstCell.row === row && Math.abs(firstCell.col - col) === 1) || // 左右相邻
+            (firstCell.col === col && Math.abs(firstCell.row - row) === 1)    // 上下相邻
+        );
+        
+        // 如果不相邻，清空第一个选择
+        if (!isAdjacent) {
+            selectedCells[0].element.classList.remove('selected');
+            selectedCells = [];
+        }
+    }
+    
     // 如果已经选中了2个格子，取消最早选中的格子
     if (selectedCells.length >= 2) {
         const oldestCell = selectedCells.shift();

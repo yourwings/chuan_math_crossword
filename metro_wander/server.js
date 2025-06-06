@@ -105,6 +105,9 @@ wss.on('connection', (ws, req) => {
         case 'end_turn':
           handleEndTurn(ws, data);
           break;
+        case 'metro_first_card':
+          handleMetroFirstCard(ws, data);
+          break;
         case 'add_ai':
           handleAddAI(ws, data);
           break;
@@ -187,7 +190,10 @@ function handleCreateRoom(ws, data) {
     gameStarted: false,
     tableCards: [],
     currentPlayerId: null,
-    deck: []
+    deck: [],
+    // 添加地铁牌特殊效果的标记
+    metroFirstCardPlayed: false,
+    metroFirstCardPlayerId: null
   };
   
   // 将玩家加入房间
@@ -365,9 +371,23 @@ function initializeGame(room) {
   
   // 牌组已经在前面洗过牌，这里不需要额外处理
   
-  // 随机选择先手玩家
-  const randomIndex = Math.floor(Math.random() * room.players.length);
-  room.currentPlayerId = room.players[randomIndex].id;
+  // 检查是否有AI玩家，如果有，则让真人玩家先手
+  const aiPlayerIndex = room.players.findIndex(player => player.isAI);
+  if (aiPlayerIndex !== -1) {
+    // 有AI玩家，选择第一个非AI玩家作为先手
+    const humanPlayerIndex = room.players.findIndex(player => !player.isAI);
+    if (humanPlayerIndex !== -1) {
+      room.currentPlayerId = room.players[humanPlayerIndex].id;
+    } else {
+      // 如果全是AI玩家（理论上不应该发生），随机选择
+      const randomIndex = Math.floor(Math.random() * room.players.length);
+      room.currentPlayerId = room.players[randomIndex].id;
+    }
+  } else {
+    // 没有AI玩家，随机选择先手玩家
+    const randomIndex = Math.floor(Math.random() * room.players.length);
+    room.currentPlayerId = room.players[randomIndex].id;
+  }
 }
 
 /**
@@ -440,10 +460,36 @@ function handlePlayCard(ws, data) {
     return;
   }
   
-  // 更新当前玩家（轮到下一个玩家）
-  const currentPlayerIndex = room.players.findIndex(p => p.id === room.currentPlayerId);
-  const nextPlayerIndex = (currentPlayerIndex + 1) % room.players.length;
-  room.currentPlayerId = room.players[nextPlayerIndex].id;
+  // 检查是否是地铁牌的第一张牌或出租车牌，如果是，则不切换到下一个玩家的回合
+  let shouldUpdateCurrentPlayer = true;
+  
+  // 如果是地铁牌，并且是第一张（没有标记metroFirstCardPlayed），则不切换玩家
+  if (playMode === 'metro' && !room.metroFirstCardPlayed) {
+    // 这里不设置room.metroFirstCardPlayed，因为这个标记会在handleMetroFirstCard函数中设置
+    // 这里只是检查是否应该切换玩家
+    shouldUpdateCurrentPlayer = false;
+    console.log(`玩家 ${ws.playerName} 出了第一张地铁牌，不切换回合`);
+  } else if (room.metroFirstCardPlayed && room.metroFirstCardPlayerId === ws.playerId) {
+    // 如果是已经出过第一张地铁牌的玩家出的第二张牌，重置标记
+    room.metroFirstCardPlayed = false;
+    room.metroFirstCardPlayerId = null;
+    console.log(`玩家 ${ws.playerName} 出了第二张地铁牌，重置标记并切换回合`);
+  } else if (playMode === 'taxi') {
+    // 如果是出租车牌，不切换玩家，允许当前玩家继续出一张地铁牌
+    shouldUpdateCurrentPlayer = false;
+    console.log(`玩家 ${ws.playerName} 出了出租车牌，不切换回合，允许继续出一张地铁牌`);
+    
+    // 注意：不在这里自动摸牌，而是等待客户端发送摸牌请求
+    // 客户端会在处理card_played消息时，检测到出租车牌，然后发送摸牌请求
+    // 这样可以避免摸两张牌的问题
+  }
+  
+  // 只有在需要更新当前玩家时才切换到下一个玩家
+  if (shouldUpdateCurrentPlayer) {
+    const currentPlayerIndex = room.players.findIndex(p => p.id === room.currentPlayerId);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % room.players.length;
+    room.currentPlayerId = room.players[nextPlayerIndex].id;
+  }
   
   // 通知所有玩家出牌结果
   broadcastToRoom(roomId, {
@@ -453,7 +499,8 @@ function handlePlayCard(ws, data) {
     playMode,
     tableCards: room.tableCards,
     currentPlayerId: room.currentPlayerId,
-    remainingCards: currentPlayer.cards.length
+    remainingCards: currentPlayer.cards.length,
+    specialEffect: playMode === 'taxi' ? 'taxi' : undefined // 如果是出租车牌，添加特殊效果标记
   });
 }
 
@@ -461,11 +508,19 @@ function handlePlayCard(ws, data) {
  * 处理摸牌请求
  */
 function handleDrawCard(ws, data) {
-  const { roomId } = data;
+  console.log(`[${new Date().toISOString()}] ===== 服务端 handleDrawCard 调试断点 =====`);
+  
+  // 解构data对象，获取roomId和specialEffect
+  const { roomId, specialEffect } = data;
+  console.log(`玩家 ${ws.playerName} 请求摸牌，roomId: ${roomId}, specialEffect: ${specialEffect || '无'}`);
+  console.log('完整请求数据:', JSON.stringify(data));
+  console.log('请求中是否包含specialEffect属性:', data.hasOwnProperty('specialEffect'));
+  
   const room = gameRooms[roomId];
   
   // 检查房间是否存在且游戏已开始
   if (!room || !room.gameStarted) {
+    console.log('错误：游戏未开始');
     sendToClient(ws, {
       type: 'error',
       message: '游戏未开始'
@@ -475,6 +530,7 @@ function handleDrawCard(ws, data) {
   
   // 检查是否是当前玩家的回合
   if (room.currentPlayerId !== ws.playerId) {
+    console.log('错误：不是当前玩家的回合');
     sendToClient(ws, {
       type: 'error',
       message: '不是你的回合'
@@ -484,12 +540,14 @@ function handleDrawCard(ws, data) {
   
   // 获取当前玩家
   const currentPlayer = room.players.find(p => p.id === ws.playerId);
-  if (!currentPlayer) return;
+  if (!currentPlayer) {
+    console.log('错误：找不到当前玩家');
+    return;
+  }
   
   // 检查牌堆是否还有牌
   if (room.deck.length === 0) {
-    // 牌堆已空，需要重新洗牌
-    // 这里简化处理，实际应该根据游戏规则处理
+    console.log('错误：牌堆已空');
     sendToClient(ws, {
       type: 'error',
       message: '牌堆已空'
@@ -500,27 +558,46 @@ function handleDrawCard(ws, data) {
   // 从牌堆中摸一张牌
   const newCard = room.deck.pop();
   currentPlayer.cards.push(newCard);
+  console.log(`玩家 ${ws.playerName} 摸了一张牌:`, JSON.stringify(newCard));
   
-  // 更新当前玩家（轮到下一个玩家）
-  const currentPlayerIndex = room.players.findIndex(p => p.id === room.currentPlayerId);
-  const nextPlayerIndex = (currentPlayerIndex + 1) % room.players.length;
-  room.currentPlayerId = room.players[nextPlayerIndex].id;
+  // 简化出租车特殊效果的判断逻辑，只检查specialEffect是否严格等于'taxi'
+  const isTaxiEffect = specialEffect === 'taxi';
+  
+  // 只有在非出租车特殊效果下才切换玩家
+  if (!isTaxiEffect) {
+    // 更新当前玩家（轮到下一个玩家）
+    const currentPlayerIndex = room.players.findIndex(p => p.id === room.currentPlayerId);
+    const nextPlayerIndex = (currentPlayerIndex + 1) % room.players.length;
+    const oldPlayerId = room.currentPlayerId;
+    room.currentPlayerId = room.players[nextPlayerIndex].id;
+    console.log(`普通摸牌：切换回合，从玩家 ${oldPlayerId} 到玩家 ${room.currentPlayerId}`);
+  } else {
+    console.log(`玩家 ${ws.playerName} 使用出租车特殊效果摸牌，不切换回合`);
+  }
   
   // 通知当前玩家摸到的牌
-  sendToClient(ws, {
+  const playerMessage = {
     type: 'card_drawn',
     card: newCard,
-    remainingDeckCount: room.deck.length
-  });
+    remainingDeckCount: room.deck.length,
+    specialEffect: isTaxiEffect ? 'taxi' : undefined // 如果是出租车特殊效果，添加标记
+  };
+  
+  // 发送消息给当前玩家
+  sendToClient(ws, playerMessage);
   
   // 通知所有玩家摸牌结果（不包括摸到的具体牌）
-  broadcastToRoom(roomId, {
+  const broadcastMessage = {
     type: 'player_drew_card',
     playerId: ws.playerId,
     currentPlayerId: room.currentPlayerId,
     remainingCards: currentPlayer.cards.length,
-    remainingDeckCount: room.deck.length
-  }, ws.playerId); // 排除当前玩家，因为已经单独发送了消息
+    remainingDeckCount: room.deck.length,
+    specialEffect: isTaxiEffect ? 'taxi' : undefined // 添加特殊效果标记
+  };
+  
+  // 广播消息给其他玩家
+  broadcastToRoom(roomId, broadcastMessage, ws.playerId); // 排除当前玩家，因为已经单独发送了消息
 }
 
 /**
@@ -613,6 +690,13 @@ function handleEndTurn(ws, data) {
     return;
   }
   
+  // 清除地铁牌特殊标记
+  if (room.metroFirstCardPlayed && room.metroFirstCardPlayerId === ws.playerId) {
+    room.metroFirstCardPlayed = false;
+    room.metroFirstCardPlayerId = null;
+    console.log(`玩家 ${ws.playerName} 结束回合，清除地铁牌特殊标记`);
+  }
+  
   // 更新当前玩家（轮到下一个玩家）
   const currentPlayerIndex = room.players.findIndex(p => p.id === room.currentPlayerId);
   const nextPlayerIndex = (currentPlayerIndex + 1) % room.players.length;
@@ -623,6 +707,44 @@ function handleEndTurn(ws, data) {
     type: 'turn_ended',
     previousPlayerId: ws.playerId,
     currentPlayerId: room.currentPlayerId
+  });
+}
+
+/**
+ * 处理地铁牌第一张牌的特殊消息
+ */
+function handleMetroFirstCard(ws, data) {
+  const { roomId, playerId } = data;
+  const room = gameRooms[roomId];
+  
+  // 检查房间是否存在且游戏已开始
+  if (!room || !room.gameStarted) {
+    sendToClient(ws, {
+      type: 'error',
+      message: '游戏未开始'
+    });
+    return;
+  }
+  
+  // 检查是否是当前玩家的回合
+  if (room.currentPlayerId !== ws.playerId) {
+    sendToClient(ws, {
+      type: 'error',
+      message: '不是你的回合'
+    });
+    return;
+  }
+  
+  // 标记该玩家正在使用地铁牌特殊效果（出第一张地铁牌后的状态）
+  room.metroFirstCardPlayed = true;
+  room.metroFirstCardPlayerId = playerId;
+  
+  console.log(`玩家 ${ws.playerName} 出了第一张地铁牌，等待出第二张或结束回合`);
+  
+  // 通知所有玩家当前玩家出了第一张地铁牌
+  broadcastToRoom(roomId, {
+    type: 'metro_first_card_played',
+    playerId: playerId
   });
 }
 
@@ -659,6 +781,9 @@ function sendToClient(ws, data) {
  * 向房间中的所有玩家广播消息
  */
 function broadcastToRoom(roomId, data, excludePlayerId = null) {
+  // 调试日志，打印完整的消息对象
+  console.log('广播消息到房间，完整消息对象:', JSON.stringify(data));
+  
   wss.clients.forEach(client => {
     if (client.roomId === roomId && client.readyState === WebSocket.OPEN && (!excludePlayerId || client.playerId !== excludePlayerId)) {
       client.send(JSON.stringify(data));

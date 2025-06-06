@@ -137,10 +137,7 @@ animate();
 document.addEventListener('DOMContentLoaded', () => {
     const playMusicBtn = document.getElementById('play-music');
     const birthdaySong = document.getElementById('birthday-song');
-    let usingWebAudio = false; // 标记是否使用Web Audio API
-    
-    // 不设置外部音频链接，直接使用Web Audio API
-    usingWebAudio = true;
+    let usingWebAudio = true; // 标记是否使用Web Audio API，直接设置为true
     
     // 初始化音频上下文和播放状态
     let audioContext;
@@ -150,30 +147,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let nextNoteTime;
     let currentNote = 0;
     
+    // 初始化音频上下文
+    function initAudio() {
+        if (audioContext) return;
+        
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        nextNoteTime = audioContext.currentTime;
+    }
+    
     // 尝试自动播放音乐
-    document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
         // 初始化音频上下文
         initAudio();
         // 自动开始播放
         startPlaying();
         playMusicBtn.textContent = '暂停音乐';
-    });
+    }, 500); // 延迟500毫秒，确保页面完全加载
     
-    // 不使用外部音频链接，已设置使用Web Audio API播放
-    
+    // 播放按钮点击事件
     playMusicBtn.addEventListener('click', () => {
-         if (usingWebAudio) {
-             initAudio();
-             
-             if (isPlaying) {
-                 stopPlaying();
-                 playMusicBtn.textContent = '播放生日歌';
-             } else {
-                 startPlaying();
-                 playMusicBtn.textContent = '暂停音乐';
-             }
-         }
-     });
+        initAudio();
+        
+        if (isPlaying) {
+            stopPlaying();
+            playMusicBtn.textContent = '播放生日歌';
+        } else {
+            startPlaying();
+            playMusicBtn.textContent = '暂停音乐';
+        }
+    });
     
     // 返回按钮
     document.getElementById('return-btn').addEventListener('click', () => {

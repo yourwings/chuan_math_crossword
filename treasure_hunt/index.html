@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小川数字宝藏</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>小川数字宝藏</h1>
+      <div class="game-controls">
+        <button id="new-game-btn" class="btn">生成新游戏</button>
+        <button id="retry-btn" class="btn">重试当前游戏</button>
+        <button id="back-btn" class="btn">返回主页</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="game-info">
+        <div class="tools-container">
+          <div class="tool" id="shovel-tool" data-tool="shovel">
+            <div class="tool-icon">⛏️</div>
+            <div class="tool-name">铲子</div>
+            <div class="tool-count" id="shovel-count">10</div>
+          </div>
+          <div class="tool" id="drill-tool" data-tool="drill">
+            <div class="tool-icon">🔩</div>
+            <div class="tool-name">钻头</div>
+            <div class="tool-count" id="drill-count">1</div>
+          </div>
+          <div class="tool" id="bomb-tool" data-tool="bomb">
+            <div class="tool-icon">💣</div>
+            <div class="tool-name">炸弹</div>
+            <div class="tool-count" id="bomb-count">1</div>
+          </div>
+        </div>
+        <div class="score-container">
+          <div class="score-label">宝藏得分:</div>
+          <div class="score" id="score">0</div>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <div id="treasure-grid" class="treasure-grid"></div>
+      </div>
+
+
+    </main>
+
+    <div id="game-result" class="game-result hidden">
+      <div class="result-content">
+        <h2>游戏结束!</h2>
+        <p>你的最终得分: <span id="final-score">0</span></p>
+        <div class="result-buttons">
+          <button id="new-game-result-btn" class="btn">新游戏</button>
+          <button id="retry-result-btn" class="btn">重试</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="leaderboard" class="leaderboard">
+      <h2>排行榜</h2>
+      <div id="leaderboard-entries" class="leaderboard-entries">
+        <!-- 排行榜条目将通过JavaScript动态添加 -->
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
