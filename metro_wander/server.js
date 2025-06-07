@@ -482,6 +482,43 @@ function handlePlayCard(ws, data) {
     // 注意：不在这里自动摸牌，而是等待客户端发送摸牌请求
     // 客户端会在处理card_played消息时，检测到出租车牌，然后发送摸牌请求
     // 这样可以避免摸两张牌的问题
+  } else if (playMode === 'bus') {
+    // 如果是公交车牌，不切换玩家，允许当前玩家继续出一张地铁牌
+    shouldUpdateCurrentPlayer = false;
+    console.log(`玩家 ${ws.playerName} 出了公交车牌，不切换回合，允许继续出一张地铁牌`);
+    
+    // 公交车牌特殊效果：交换最后两张地铁站牌的位置
+    const stationCards = room.tableCards.filter(card => card.type === 'station');
+    if (stationCards.length >= 2) {
+      // 找到最后一张和倒数第二张地铁站牌
+      const lastStationIndices = [];
+      for (let i = room.tableCards.length - 1; i >= 0; i--) {
+        if (room.tableCards[i].type === 'station') {
+          lastStationIndices.push(i);
+          if (lastStationIndices.length === 2) break;
+        }
+      }
+      
+      if (lastStationIndices.length === 2) {
+        // 获取最后一张和倒数第二张地铁站牌的索引
+        const lastStationIndex = lastStationIndices[0];
+        const secondLastStationIndex = lastStationIndices[1];
+        
+        // 交换这两张地铁站牌
+        const lastStation = room.tableCards[lastStationIndex];
+        const secondLastStation = room.tableCards[secondLastStationIndex];
+        
+        // 执行交换
+        room.tableCards[lastStationIndex] = secondLastStation;
+        room.tableCards[secondLastStationIndex] = lastStation;
+        
+        console.log(`公交车特殊效果：交换了${lastStation.name}站和${secondLastStation.name}站的位置`);
+      } else {
+        console.log('公交车效果：无法找到足够的地铁站牌');
+      }
+    } else {
+      console.log('公交车效果：桌面上没有足够的地铁站牌');
+    }
   }
   
   // 只有在需要更新当前玩家时才切换到下一个玩家

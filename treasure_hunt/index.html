@@ -66,8 +66,48 @@
         <!-- 排行榜条目将通过JavaScript动态添加 -->
       </div>
     </div>
+    
+    <div class="game-instructions-container">
+      <button id="toggle-instructions-btn" class="btn toggle-instructions-btn">显示游戏说明</button>
+      <div id="game-instructions" class="game-instructions hidden">
+        <h2>游戏说明</h2>
+        <p>在小川数字宝藏游戏中，你需要使用不同的工具挖掘宝藏，获得尽可能高的分数。</p>
+        <p>每个格子中的数字代表宝藏的价值（1-5分）。空白格子没有宝藏。</p>
+        <p>游戏开始时，你有有限的工具可以使用。当所有工具用完后，游戏结束。</p>
+        
+        <h3>道具说明</h3>
+        <div class="tool-descriptions">
+          <div class="tool-description">
+            <div class="tool-icon">⛏️</div>
+            <div class="tool-info">
+              <h4>铲子</h4>
+              <p>挖掘单个格子，获得该格子的宝藏。初始数量：10个。</p>
+            </div>
+          </div>
+          
+          <div class="tool-description">
+            <div class="tool-icon">🔩</div>
+            <div class="tool-info">
+              <h4>钻头</h4>
+              <p>挖掘一整列格子，获得该列所有格子的宝藏。初始数量：1个。</p>
+            </div>
+          </div>
+          
+          <div class="tool-description">
+            <div class="tool-icon">💣</div>
+            <div class="tool-info">
+              <h4>炸弹</h4>
+              <p>挖掘3x3范围内的所有格子，获得这些格子的宝藏。初始数量：1个。</p>
+            </div>
+          </div>
+        </div>
+        
+        <p class="strategy-tip">策略提示：先使用钻头和炸弹挖掘高价值区域，再用铲子挖掘剩余的高价值格子。</p>
+      </div>
+    </div>
   </div>
 
+  <script src="../birthday_checker.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

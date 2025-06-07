@@ -22,7 +22,8 @@ let gameState = {
   tools: { ...INITIAL_TOOLS }, // 当前工具数量
   selectedTool: 'shovel', // 当前选择的工具
   isGameOver: false,  // 游戏是否结束
-  startTime: null     // 游戏开始时间
+  startTime: null,    // 游戏开始时间
+  optimalScore: 0     // 当前游戏的最优解分数
 };
 
 // 排行榜 - 只针对当前游戏
@@ -42,6 +43,8 @@ const finalScoreElement = document.getElementById('final-score');
 const newGameResultButton = document.getElementById('new-game-result-btn');
 const retryResultButton = document.getElementById('retry-result-btn');
 const leaderboardEntriesElement = document.getElementById('leaderboard-entries');
+const toggleInstructionsButton = document.getElementById('toggle-instructions-btn');
+const gameInstructionsElement = document.getElementById('game-instructions');
 const toolElements = {
   shovel: document.getElementById('shovel-tool'),
   drill: document.getElementById('drill-tool'),
@@ -95,6 +98,14 @@ function initializeGame(isNewGame = true) {
   
   // 保存排行榜
   saveLeaderboard();
+  
+  // 确保游戏说明默认隐藏
+  if (gameInstructionsElement && !gameInstructionsElement.classList.contains('hidden')) {
+    gameInstructionsElement.classList.add('hidden');
+    if (toggleInstructionsButton) {
+      toggleInstructionsButton.textContent = '显示游戏说明';
+    }
+  }
 }
 
 // 生成宝藏网格
@@ -114,6 +125,10 @@ function generateTreasureGrid() {
     }
     gameState.grid.push(row);
   }
+  
+  // 计算当前游戏的最优解
+  gameState.optimalScore = calculateOptimalScore(gameState.grid);
+  console.log('当前游戏的最优解分数：', gameState.optimalScore);
 }
 
 // 更新UI
@@ -276,6 +291,27 @@ function showGameResult() {
   
   // 更新排行榜
   updateLeaderboard();
+  
+  // 检查是否满足生日彩蛋条件
+  checkBirthdayEggCondition();
+}
+
+// 检查是否满足生日彩蛋条件
+function checkBirthdayEggCondition() {
+  // 检查是否是小川生日（6月7日）
+  const today = new Date();
+  const isChauanBirthday = (today.getMonth() === 5 && today.getDate() === 7); // 月份从0开始，所以6月是5
+  
+  // 检查得分是否大于67
+  const isScoreHighEnough = gameState.score > 67;
+  
+  // 如果满足条件，显示生日彩蛋
+  if (isChauanBirthday && isScoreHighEnough && window.birthdayChecker) {
+    // 延迟2秒后显示彩蛋，让用户先看到得分
+    setTimeout(() => {
+      window.birthdayChecker.showEgg();
+    }, 2000);
+  }
 }
 
 // 更新排行榜
@@ -287,10 +323,14 @@ function updateLeaderboard() {
   // 计算游戏时长（秒）
   const gameDuration = Math.floor((now - gameState.startTime) / 1000);
   
+  // 检查是否达到最优解
+  const isOptimal = gameState.score >= gameState.optimalScore;
+  
   leaderboard.push({
     score: gameState.score,
     date: dateString,
-    duration: gameDuration
+    duration: gameDuration,
+    isOptimal: isOptimal // 添加是否达到最优解的标记
   });
   
   // 按得分降序排序
@@ -349,7 +389,20 @@ function renderLeaderboard() {
     
     const scoreElement = document.createElement('div');
     scoreElement.className = 'leaderboard-score';
-    scoreElement.textContent = entry.score;
+    
+    // 如果达到最优解，添加皇冠标记
+    if (entry.isOptimal) {
+      const scoreText = document.createTextNode(entry.score);
+      scoreElement.appendChild(scoreText);
+      
+      const crownIcon = document.createElement('span');
+      crownIcon.className = 'crown-icon';
+      crownIcon.textContent = '👑';
+      crownIcon.title = '达到最优解';
+      scoreElement.appendChild(crownIcon);
+    } else {
+      scoreElement.textContent = entry.score;
+    }
     
     // 添加游戏时长
     const durationElement = document.createElement('div');
@@ -373,6 +426,123 @@ function getToolName(tool) {
     case 'bomb': return '炸弹';
     default: return '';
   }
+}
+
+// 计算最优解分数
+function calculateOptimalScore(grid) {
+  // 创建网格的副本，避免修改原始网格
+  const gridCopy = JSON.parse(JSON.stringify(grid));
+  
+  // 存储所有单元格的坐标和价值
+  const cells = [];
+  for (let i = 0; i < GRID_SIZE; i++) {
+    for (let j = 0; j < GRID_SIZE; j++) {
+      if (gridCopy[i][j] > 0) {
+        cells.push({ row: i, col: j, value: gridCopy[i][j] });
+      }
+    }
+  }
+  
+  // 按价值降序排序单元格
+  cells.sort((a, b) => b.value - a.value);
+  
+  // 创建已挖掘单元格的标记数组
+  const revealed = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+  
+  let totalScore = 0;
+  let remainingShovel = INITIAL_TOOLS.shovel;
+  let remainingDrill = INITIAL_TOOLS.drill;
+  let remainingBomb = INITIAL_TOOLS.bomb;
+  
+  // 首先使用炸弹（3x3范围）
+  if (remainingBomb > 0) {
+    // 找出使用炸弹能获得最高分数的位置
+    let bestBombScore = 0;
+    let bestBombRow = -1;
+    let bestBombCol = -1;
+    
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        let bombScore = 0;
+        // 计算使用炸弹在(i,j)位置能获得的分数
+        for (let r = Math.max(0, i - 1); r <= Math.min(GRID_SIZE - 1, i + 1); r++) {
+          for (let c = Math.max(0, j - 1); c <= Math.min(GRID_SIZE - 1, j + 1); c++) {
+            if (gridCopy[r][c] > 0) {
+              bombScore += gridCopy[r][c];
+            }
+          }
+        }
+        
+        if (bombScore > bestBombScore) {
+          bestBombScore = bombScore;
+          bestBombRow = i;
+          bestBombCol = j;
+        }
+      }
+    }
+    
+    // 使用炸弹
+    if (bestBombRow !== -1 && bestBombCol !== -1) {
+      for (let r = Math.max(0, bestBombRow - 1); r <= Math.min(GRID_SIZE - 1, bestBombRow + 1); r++) {
+        for (let c = Math.max(0, bestBombCol - 1); c <= Math.min(GRID_SIZE - 1, bestBombCol + 1); c++) {
+          if (gridCopy[r][c] > 0 && !revealed[r][c]) {
+            totalScore += gridCopy[r][c];
+            revealed[r][c] = true;
+          }
+        }
+      }
+      remainingBomb--;
+    }
+  }
+  
+  // 然后使用钻头（整列）
+  if (remainingDrill > 0) {
+    // 找出使用钻头能获得最高分数的列
+    let bestDrillScore = 0;
+    let bestDrillCol = -1;
+    
+    for (let j = 0; j < GRID_SIZE; j++) {
+      let drillScore = 0;
+      // 计算使用钻头在第j列能获得的分数
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (gridCopy[i][j] > 0 && !revealed[i][j]) {
+          drillScore += gridCopy[i][j];
+        }
+      }
+      
+      if (drillScore > bestDrillScore) {
+        bestDrillScore = drillScore;
+        bestDrillCol = j;
+      }
+    }
+    
+    // 使用钻头
+    if (bestDrillCol !== -1) {
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (gridCopy[i][bestDrillCol] > 0 && !revealed[i][bestDrillCol]) {
+          totalScore += gridCopy[i][bestDrillCol];
+          revealed[i][bestDrillCol] = true;
+        }
+      }
+      remainingDrill--;
+    }
+  }
+  
+  // 最后使用铲子，按价值从高到低挖掘
+  for (const cell of cells) {
+    if (!revealed[cell.row][cell.col] && remainingShovel > 0) {
+      totalScore += cell.value;
+      revealed[cell.row][cell.col] = true;
+      remainingShovel--;
+    }
+    
+    // 如果铲子用完了，结束循环
+    if (remainingShovel <= 0) {
+      break;
+    }
+  }
+  
+  return totalScore;
 }
 
 // 事件监听器
@@ -416,6 +586,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // 游戏结果中的重试按钮
   retryResultButton.addEventListener('click', () => {
     initializeGame(false);
+  });
+  
+  // 游戏说明显示/隐藏按钮
+  toggleInstructionsButton.addEventListener('click', () => {
+    const isHidden = gameInstructionsElement.classList.contains('hidden');
+    if (isHidden) {
+      gameInstructionsElement.classList.remove('hidden');
+      toggleInstructionsButton.textContent = '隐藏游戏说明';
+    } else {
+      gameInstructionsElement.classList.add('hidden');
+      toggleInstructionsButton.textContent = '显示游戏说明';
+    }
   });
   
   // 渲染排行榜

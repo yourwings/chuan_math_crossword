@@ -95,11 +95,8 @@ function checkBirthdayEgg() {
     // 如果不是小川生日，不触发彩蛋
     if (!isChauanBirthday) return;
     
-    // 检查游戏时长是否超过3分钟（180000毫秒）
-    const playTimeMinutes = gamePlayTime / 60000;
-    if (playTimeMinutes >= 3) {
-        showBirthdayEgg();
-    }
+    // 注意：在数字宝藏游戏中，我们使用得分检查而不是时长检查
+    // 具体检查逻辑在game.js的checkBirthdayEggCondition函数中实现
 }
 
 // 显示生日彩蛋

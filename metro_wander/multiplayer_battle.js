@@ -526,6 +526,10 @@ function handleCardPlayed(data) {
         window.taxiEffectActive = false;
         console.log('初始化window.taxiEffectActive为false');
       }
+      if (window.metroFirstCardConfirmed === undefined) {
+        window.metroFirstCardConfirmed = false;
+        console.log('初始化window.metroFirstCardConfirmed为false');
+      }
       
       // 无论是谁出的出租车牌，都设置出租车特殊效果标记和特殊效果已播放标记
       window.taxiEffectActive = true;
@@ -590,10 +594,14 @@ function handleCardPlayed(data) {
   
   // 检查是否是特殊效果后的出牌（只能出一张）
   let isSpecialEffectPlay = false;
-  // 确保window.specialEffectPlayed已定义，如果未定义则初始化为false
+  // 确保window.specialEffectPlayed和window.metroFirstCardConfirmed已定义，如果未定义则初始化为false
   if (window.specialEffectPlayed === undefined) {
     window.specialEffectPlayed = false;
     console.log('初始化window.specialEffectPlayed为false');
+  }
+  if (window.metroFirstCardConfirmed === undefined) {
+    window.metroFirstCardConfirmed = false;
+    console.log('初始化window.metroFirstCardConfirmed为false');
   }
   if (window.specialEffectPlayed && data.playMode === 'metro') {
     // 标记这是特殊效果后的出牌
@@ -772,6 +780,7 @@ function handleCardPlayed(data) {
         
         // 重置标记
         window.metroCardPlayed = false;
+        window.metroFirstCardConfirmed = false;
         window.specialEffectPlayed = false;
         window.taxiEffectActive = false;
         
@@ -794,9 +803,13 @@ function handleCardPlayed(data) {
     }
     // 添加一个标记，表示这是特殊效果后的出牌，只能出一张
     window.specialEffectPlayed = true;
-    // 修改提示信息，明确告知玩家只能出一张地铁牌
+    // 修改提示信息，根据不同的牌类型显示不同的提示
     if (data.playerId === localPlayerId) {
-      showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
+      if (data.playMode === 'bus') {
+        showGameMessage('公交车效果已生效，可以选择打出一张地铁站牌或结束回合');
+      } else {
+        showGameMessage('可以出一张地铁站牌，出完后将自动结束回合');
+      }
     }
     updateButtonStates();
   } else if (data.playMode === 'metro' && data.playerId === localPlayerId) {
@@ -824,6 +837,15 @@ function handleCardPlayed(data) {
     } else {
       // 标记已经出过一张地铁牌
       window.metroCardPlayed = true;
+      
+      // 向服务器发送地铁牌第一张牌的特殊消息
+      sendToServer({
+        type: 'metro_first_card',
+        roomId: roomId,
+        playerId: localPlayerId
+      });
+      
+      console.log('向服务器发送地铁牌第一张牌的特殊消息');
       
       // 移除所有可能存在的结束回合按钮
       const allEndTurnBtns = document.querySelectorAll('#end-turn-btn');
@@ -868,6 +890,7 @@ function handleCardPlayed(data) {
     
     // 重置标记
     window.metroCardPlayed = false;
+    window.metroFirstCardConfirmed = false;
     
     // 发送结束回合请求到服务器
     sendToServer({
@@ -938,6 +961,7 @@ function handleCardPlayed(data) {
       
       // 重置标记
       window.metroCardPlayed = false;
+      window.metroFirstCardConfirmed = false;
       window.specialEffectPlayed = false;
       window.taxiEffectActive = false;
       
@@ -1029,7 +1053,10 @@ function handleMetroFirstCardPlayed(data) {
   if (data.playerId === localPlayerId) {
     // 标记已经出过一张地铁牌
     window.metroCardPlayed = true;
+    // 标记服务器已确认第一张地铁牌
+    window.metroFirstCardConfirmed = true;
     console.log('收到metro_first_card_played消息，设置window.metroCardPlayed =', window.metroCardPlayed);
+    console.log('收到metro_first_card_played消息，设置window.metroFirstCardConfirmed =', window.metroFirstCardConfirmed);
     
     // 显示消息
     showGameMessage('你出了第一张地铁牌，可以继续出第二张或结束回合');
@@ -1173,6 +1200,7 @@ function handleCardDrawn(data) {
       
       // 重置标记
       window.metroCardPlayed = false;
+      window.metroFirstCardConfirmed = false;
       window.specialEffectPlayed = false;
       window.taxiEffectActive = false;
       
@@ -2109,8 +2137,8 @@ function handlePlayerPlay() {
   }
   
   // 如果不是当前玩家的回合或游戏已结束，不允许出牌
-  // 但是如果是出第二张地铁牌的特殊情况或出租车特殊效果激活，则允许出牌
-  if ((!isPlayerTurn && !window.metroCardPlayed && !window.taxiEffectActive) || gameOver) {
+  // 但是如果是出第二张地铁牌的特殊情况（且已收到服务器确认）或出租车特殊效果激活，则允许出牌
+  if ((!isPlayerTurn && !(window.metroCardPlayed && window.metroFirstCardConfirmed) && !window.taxiEffectActive) || gameOver) {
     if (gameStarted && players.length > 0 && !gameOver) {
       // 在多人游戏模式下显示错误提示
       showGameMessage('错误：不是你的回合');
@@ -2179,30 +2207,39 @@ function handlePlayerPlay() {
     window.taxiEffectActive = true; // 设置出租车特殊效果标记
     console.log('出租车特殊效果已触发，specialAction =', specialAction);
   } else if (playMode === 'bus') {
-    // 公交车牌特殊效果：将倒数第二张地铁牌放到牌堆末尾
+    // 公交车牌特殊效果：交换最后两张地铁站牌的位置
     // 首先检查是否有足够的地铁站牌在桌面上
     const stationCards = tableCards.filter(card => card.type === CARD_TYPE.STATION);
     if (stationCards.length >= 2) {
-      // 找到倒数第二张地铁站牌
-      const secondLastStationIndex = tableCards.findIndex((card, index) => {
-        if (card.type !== CARD_TYPE.STATION) return false;
-        const stationsAfter = tableCards.slice(index + 1).filter(c => c.type === CARD_TYPE.STATION);
-        return stationsAfter.length === 1; // 如果后面只有一张地铁站牌，那么这张就是倒数第二张
-      });
+      // 找到最后一张和倒数第二张地铁站牌
+      const lastStationIndices = [];
+      for (let i = tableCards.length - 1; i >= 0; i--) {
+        if (tableCards[i].type === CARD_TYPE.STATION) {
+          lastStationIndices.push(i);
+          if (lastStationIndices.length === 2) break;
+        }
+      }
       
-      if (secondLastStationIndex !== -1) {
-        // 将倒数第二张地铁站牌移到牌堆末尾（而不是牌堆首位）
+      if (lastStationIndices.length === 2) {
+        // 获取最后一张和倒数第二张地铁站牌的索引
+        const lastStationIndex = lastStationIndices[0];
+        const secondLastStationIndex = lastStationIndices[1];
+        
+        // 交换这两张地铁站牌
+        const lastStation = tableCards[lastStationIndex];
         const secondLastStation = tableCards[secondLastStationIndex];
-        tableCards.splice(secondLastStationIndex, 1);
-        // 将地铁站牌放到末尾，而不是首位
-        tableCards.push(secondLastStation);
-        effectMessage = `公交车将${secondLastStation.name}站移到了牌堆末尾！可以选择打出一张地铁牌`;
+        
+        // 执行交换
+        tableCards[lastStationIndex] = secondLastStation;
+        tableCards[secondLastStationIndex] = lastStation;
+        
+        effectMessage = `公交车交换了${lastStation.name}站和${secondLastStation.name}站的位置！可以选择打出一张地铁牌`;
         specialAction = true; // 公交车也设置为特殊行动，允许继续出一张地铁牌
         console.log('公交车特殊效果已触发，specialAction =', specialAction);
         // 设置特殊效果标记，表示这是特殊效果后的出牌，只能出一张地铁牌
         window.specialEffectPlayed = true;
       } else {
-        effectMessage = '公交车效果：无法找到倒数第二张地铁站牌';
+        effectMessage = '公交车效果：无法找到足够的地铁站牌';
       }
     } else {
       effectMessage = '公交车效果：桌面上没有足够的地铁站牌';
@@ -2292,7 +2329,7 @@ function handlePlayerPlay() {
         console.log('出租车效果：摸了一张牌', newCard);
     } else if (playMode === 'bus') {
       // 公交车效果已经在前面处理过了
-      showGameMessage('公交车效果已生效，可以选择打出一张地铁站牌或结束回合');
+      showGameMessage('公交车已交换了最后两张地铁站牌的位置，可以选择打出一张地铁站牌或结束回合');
       console.log('公交车效果已处理完毕');
     }
     
@@ -2316,6 +2353,7 @@ function handlePlayerPlay() {
       
       // 重置标记
       window.metroCardPlayed = false;
+      window.metroFirstCardConfirmed = false;
       window.specialEffectPlayed = false;
       window.taxiEffectActive = false;
       
@@ -2358,6 +2396,7 @@ function handlePlayerPlay() {
     
     // 重置标记
     window.metroCardPlayed = false;
+    window.metroFirstCardConfirmed = false;
     
     // 记录玩家的动作
     const lastAction = '特殊效果后出了一张地铁站牌';
@@ -2421,6 +2460,7 @@ function handlePlayerPlay() {
       
       // 重置标记
       window.metroCardPlayed = false;
+      window.metroFirstCardConfirmed = false;
       window.specialEffectPlayed = false;
       window.taxiEffectActive = false;
       
