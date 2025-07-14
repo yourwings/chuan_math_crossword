@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>围棋游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body onload="initBoard()">
+    <h1>围棋游戏</h1>
+     <div class="game-info">
+         <p>当前玩家: <span id="currentPlayer">黑棋</span></p>
+         <p>黑棋分数: <span id="blackScore">0</span> 白棋分数: <span id="whiteScore">0</span></p>
+         <div class="timers">
+             <p>黑棋计时: <span id="blackTimer">00:00</span></p>
+             <p>白棋计时: <span id="whiteTimer">00:00</span></p>
+         </div>
+     </div>
+     <canvas id="goBoard" width="600" height="600"></canvas>
+    <div class="controls">
+        <button id="passButton">弃权</button>
+        <button id="resetButton">重置</button>
+    </div>
+    <div class="board-size-selection">
+        <label for="boardSize">选择棋盘大小:</label>
+        <select id="boardSize">
+            <option value="9">9x9</option>
+            <option value="13">13x13</option>
+            <option value="19" selected>19x19</option>
+        </select>
+        <button id="startGameButton">开始游戏</button>
+    </div>
+    <div id="toast" class="toast"></div>
+    <script src="game.js"></script>
+</body>
+</html>

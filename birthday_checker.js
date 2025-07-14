@@ -95,8 +95,11 @@ function checkBirthdayEgg() {
     // 如果不是小川生日，不触发彩蛋
     if (!isChauanBirthday) return;
     
-    // 注意：在数字宝藏游戏中，我们使用得分检查而不是时长检查
-    // 具体检查逻辑在game.js的checkBirthdayEggCondition函数中实现
+    // 检查游戏时长是否超过3分钟（180000毫秒）
+    const playTimeMinutes = gamePlayTime / 60000;
+    if (playTimeMinutes >= 3) {
+        showBirthdayEgg();
+    }
 }
 
 // 显示生日彩蛋
@@ -104,8 +107,35 @@ function showBirthdayEgg() {
     birthdayEggTriggered = true;
     saveGameData();
     
+    // 动态确定彩蛋页面的路径
+    // 获取当前页面的路径
+    const currentPath = window.location.pathname;
+    
+    // 确定项目根目录相对于当前页面的路径
+    let basePath = '';
+    
+    // 检查当前路径中的目录层级
+    // 如果包含子目录路径（如 /metro_wander/main.html），则需要返回上一级
+    if (currentPath.includes('/') && currentPath.split('/').length > 2) {
+        // 在子目录中，需要返回到根目录
+        const segments = currentPath.split('/');
+        // 移除最后一个文件名部分
+        segments.pop();
+        // 计算需要返回的层级
+        const depth = segments.length - 1; // 减1是因为第一个元素通常是空字符串（路径以/开头）
+        
+        // 构建返回到根目录的路径
+        if (depth > 0) {
+            basePath = '../'.repeat(depth);
+        }
+    }
+    
+    // 构建完整的彩蛋页面路径
+    const birthdayPath = basePath + 'birthday_surprise/index.html';
+    
     // 跳转到彩蛋页面
-    window.location.href = 'birthday_surprise/index.html';
+    console.log('跳转到彩蛋页面:', birthdayPath);
+    window.location.href = birthdayPath;
 }
 
 // 在页面加载完成后初始化

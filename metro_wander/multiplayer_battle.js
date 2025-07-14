@@ -2,12 +2,12 @@
 
 // 导入地铁数据
 import { metroData } from './metro_data.js';
+// 导入 WebRTC 点对点连接管理类
+import WebRTCPeerManager from './webrtc_peer.js';
 
-// WebSocket连接
-let socket = null;
+// WebRTC 连接
+let peerManager = null;
 let isConnected = false;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
 
 // 多人游戏状态变量
 let isHost = false;
@@ -147,140 +147,108 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * 初始化WebSocket连接
+ * 初始化WebRTC连接
  */
-function initializeWebSocket(playerName, roomIdParam = null) {
+function initializeWebRTC(playerName, joinRoomId = null) {
   // 生成唯一的玩家ID
   localPlayerId = 'player_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
   localPlayerName = playerName;
   
-  // 构建WebSocket URL
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.hostname}:3000?playerId=${localPlayerId}&playerName=${encodeURIComponent(playerName)}`;
+  // 创建WebRTC点对点连接管理器
+  peerManager = new WebRTCPeerManager();
   
-  // 如果是加入现有房间，添加房间ID参数
-  if (roomIdParam) {
-    roomId = roomIdParam;
-    socket = new WebSocket(`${wsUrl}&roomId=${roomId}`);
+  // 注册消息回调
+  registerWebRTCCallbacks();
+  
+  // 设置连接状态
+  isConnected = true;
+  showGameMessage('WebRTC连接已初始化');
+  
+  // 如果是加入现有房间
+  if (joinRoomId) {
+    roomId = joinRoomId;
+    // 作为客户端加入房间
+    peerManager.joinPeer(playerName);
   } else {
-    socket = new WebSocket(wsUrl);
+    // 作为主机创建房间
+    peerManager.initializeAsHost(playerName);
   }
-  
-  // 连接打开事件
-  socket.addEventListener('open', () => {
-    console.log('WebSocket连接已建立');
-    isConnected = true;
-    reconnectAttempts = 0;
-    showGameMessage('已连接到服务器');
-    
-    // 延迟执行后续操作，避免消息端口关闭错误
-    setTimeout(() => {
-      console.log('WebSocket连接已稳定');
-    }, 100);
+}
+
+/**
+ * 注册WebRTC消息回调
+ */
+function registerWebRTCCallbacks() {
+  // 房间创建回调
+  peerManager.on('room_created', (data) => {
+    handleRoomCreated(data);
   });
   
-  // 接收消息事件
-  socket.addEventListener('message', (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log('收到服务器消息:', data);
-      
-      // 添加更详细的调试信息
-      if (data.type === 'room_joined') {
-        console.log('收到room_joined消息，房间ID:', data.roomId);
-        console.log('玩家列表:', data.players);
-        console.log('房主ID:', data.hostId);
-        console.log('本地玩家ID:', localPlayerId);
-      }
-      
-      // 使用setTimeout延迟处理消息，避免消息端口关闭错误
-      setTimeout(() => {
-        // 根据消息类型处理不同的操作
-        switch (data.type) {
-          case 'room_created':
-            handleRoomCreated(data);
-            break;
-          case 'room_joined':
-            handleRoomJoined(data);
-            break;
-          case 'player_joined':
-            handlePlayerJoined(data);
-            break;
-          case 'player_left':
-            handlePlayerLeft(data);
-            break;
-          case 'game_started':
-            handleGameStarted(data);
-            break;
-          case 'card_played':
-            handleCardPlayed(data);
-            break;
-          case 'player_drew_card':
-            handlePlayerDrewCard(data);
-            break;
-          case 'card_drawn':
-            handleCardDrawn(data);
-            break;
-          case 'game_over':
-            handleGameOver(data);
-            break;
-          case 'room_list':
-            handleRoomList(data);
-            break;
-          case 'ai_added':
-            handleAIAdded(data);
-            break;
-          case 'turn_ended':
-            handleTurnEnded(data);
-            break;
-          case 'metro_first_card_played':
-            handleMetroFirstCardPlayed(data);
-            break;
-          case 'error':
-            showGameMessage(`错误: ${data.message}`, true);
-            break;
-          default:
-            console.log(`未知消息类型: ${data.type}`);
-        }
-      }, 0);
-    } catch (error) {
-      console.error('处理消息时出错:', error);
-    }
+  // 房间加入回调
+  peerManager.on('room_joined', (data) => {
+    handleRoomJoined(data);
   });
   
-  // 连接关闭事件
-  socket.addEventListener('close', () => {
-    console.log('WebSocket连接已关闭');
-    isConnected = false;
-    
-    // 使用setTimeout延迟处理关闭事件，避免消息端口关闭错误
-    setTimeout(() => {
-      // 尝试重新连接
-      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-        reconnectAttempts++;
-        showGameMessage(`连接已断开，正在尝试重新连接 (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-        setTimeout(() => {
-          if (roomId) {
-            initializeWebSocket(localPlayerName, roomId);
-          } else {
-            initializeWebSocket(localPlayerName);
-          }
-        }, 3000);
-      } else {
-        showGameMessage('连接已断开，请刷新页面重试', true);
-      }
-    }, 0);
+  // 玩家加入回调
+  peerManager.on('player_joined', (data) => {
+    handlePlayerJoined(data);
   });
   
-  // 连接错误事件
-  socket.addEventListener('error', (error) => {
-    console.error('WebSocket连接错误:', error);
-    // 使用setTimeout延迟处理错误事件，避免消息端口关闭错误
-    setTimeout(() => {
-      showGameMessage('连接错误，请检查网络连接', true);
-    }, 0);
+  // 玩家离开回调
+  peerManager.on('player_left', (data) => {
+    handlePlayerLeft(data);
+  });
+  
+  // 游戏开始回调
+  peerManager.on('game_started', (data) => {
+    handleGameStarted(data);
+  });
+  
+  // 出牌回调
+  peerManager.on('card_played', (data) => {
+    handleCardPlayed(data);
+  });
+  
+  // 玩家摸牌回调
+  peerManager.on('player_drew_card', (data) => {
+    handlePlayerDrewCard(data);
+  });
+  
+  // 摸牌结果回调
+  peerManager.on('card_drawn', (data) => {
+    handleCardDrawn(data);
+  });
+  
+  // 回合结束回调
+  peerManager.on('turn_ended', (data) => {
+    handleTurnEnded(data);
   });
 }
+  
+/**
+ * 发送消息到对等方
+ */
+function sendToPeers(message) {
+  if (peerManager) {
+    if (isHost) {
+      // 如果是房主，广播消息给所有对等方
+      peerManager.broadcastToPeers(message);
+    } else {
+      // 如果不是房主，发送消息给房主
+      const hostPlayer = players.find(p => p.isHost);
+      if (hostPlayer) {
+        peerManager.sendToPeer(hostPlayer.id, message);
+      } else {
+        console.error('找不到房主玩家');
+        showGameMessage('通信错误，找不到房主', true);
+      }
+    }
+  } else {
+    console.error('WebRTC 连接未初始化');
+    showGameMessage('连接未初始化，请刷新页面重试', true);
+  }
+}
+
 
 /**
  * 处理房间创建成功消息
@@ -1597,14 +1565,11 @@ function setupEventListeners() {
 
 /**
  * 发送消息到服务器
+ * @deprecated 使用 sendToPeers 替代
  */
 function sendToServer(message) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message));
-  } else {
-    console.error('WebSocket连接未建立或已关闭');
-    showGameMessage('与服务器的连接已断开，请刷新页面重试', true);
-  }
+  // 转发到 sendToPeers 函数
+  sendToPeers(message);
 }
 
 /**
@@ -1621,27 +1586,14 @@ function setupMultiplayerEventListeners() {
     
     localPlayerName = playerName;
     
-    // 生成随机房间ID
-    const randomRoomId = 'room_' + Math.floor(Math.random() * 10000);
+    // 初始化WebRTC连接作为主机
+    initializeWebRTC(playerName);
     
-    // 初始化WebSocket连接
-    initializeWebSocket(playerName);
-    
-    // 连接成功后发送创建房间请求
-    const checkConnectionInterval = setInterval(() => {
-      if (isConnected) {
-        clearInterval(checkConnectionInterval);
-        
-        // 发送创建房间请求
-        sendToServer({
-          type: 'create_room',
-          roomId: randomRoomId,
-          playerName: playerName,
-          playerId: localPlayerId
-        });
-      }
-    }, 100);
+    // 不在这里调用showWaitingRoom，而是等待room_created回调中调用
+    // showWaitingRoom();
+    console.log('已初始化WebRTC连接，等待room_created回调...');
   });
+ 
   
   // 加入游戏按钮
   joinGameBtn.addEventListener('click', () => {
