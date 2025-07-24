@@ -1,4 +1,4 @@
-import { getBoard, getCurrentPlayer, setBoard, setLastMove, setIsAiThinking, switchPlayer, getGameEnded, getGameStarted, getIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove } from './gameLogic.js';
+import { getBoard, getCurrentPlayer, setBoard, setLastMove, setIsAiThinking, switchPlayer, getGameEnded, getGameStarted, getIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove, addDebugInfo } from './gameLogic.js';
 import { isValidMove, checkCapturesSimulation, removeCapturedStones } from './board.js';
 
 // 位置价值表 - 基于围棋理论的位置重要性
@@ -203,12 +203,59 @@ class MCTSNode {
         // 检查是否能逃脱被提
         const opponentColor = this.color === 'black' ? 'white' : 'black';
         testBoard[r][c] = opponentColor;
-        const wouldBeCaptured = checkCapturesSimulation(testBoard, opponentColor);
-        if (wouldBeCaptured && wouldBeCaptured.some(pos => pos.r === r && pos.c === c)) {
+        
+        // 检查当前位置的棋子是否会被提
+        const visited = Array(testBoard.length).fill(0).map(() => Array(testBoard[0].length).fill(false));
+        const group = this.getGroupAt(r, c, opponentColor, visited, testBoard);
+        const liberties = this.getLibertiesForGroup(group, testBoard);
+        
+        if (liberties === 0) {
             value -= 5; // 避免被提
         }
         
         return value;
+    }
+
+    // 辅助方法：获取指定位置的棋子组
+    getGroupAt(row, col, color, visited, board) {
+        if (row < 0 || row >= board.length || col < 0 || col >= board[0].length ||
+            visited[row][col] || board[row][col] !== color) {
+            return [];
+        }
+        
+        visited[row][col] = true;
+        const group = [[row, col]];
+        
+        // 检查四个方向的邻居
+        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (const [dr, dc] of directions) {
+            const newRow = row + dr;
+            const newCol = col + dc;
+            group.push(...this.getGroupAt(newRow, newCol, color, visited, board));
+        }
+        
+        return group;
+    }
+
+    // 辅助方法：获取棋子组的气数
+    getLibertiesForGroup(group, board) {
+        const liberties = new Set();
+        
+        for (const [row, col] of group) {
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of directions) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                
+                if (newRow >= 0 && newRow < board.length && 
+                    newCol >= 0 && newCol < board[0].length && 
+                    board[newRow][newCol] === 'empty') {
+                    liberties.add(`${newRow},${newCol}`);
+                }
+            }
+        }
+        
+        return liberties.size;
     }
 
     isFullyExpanded() {
@@ -672,21 +719,48 @@ export async function aiMove(ctx, canvas) {
     const simulations = getAIDifficulty();
     
     try {
+        // 记录AI开始思考
+        addDebugInfo({
+            type: 'ai_thinking_start',
+            player: aiColor,
+            simulations: simulations,
+            boardSize: getBoardSize()
+        });
+        
         // 使用异步MCTS算法选择最佳移动
         const bestMove = await mcts(currentBoard, aiColor, simulations);
         
         if (bestMove) {
+            // 记录AI选择的移动
+            addDebugInfo({
+                type: 'ai_move_selected',
+                player: aiColor,
+                position: `(${bestMove.r}, ${bestMove.c})`,
+                visits: bestMove.visits || 'unknown',
+                winRate: bestMove.winRate || 'unknown'
+            });
+            
             await placeStoneAndUpdate(bestMove.r, bestMove.c, aiColor, ctx, canvas, () => {
                 setIsAiThinking(false);
                 setPlayerCanMove(true);
             });
         } else {
             // AI无法找到有效移动，弃权
+            addDebugInfo({
+                type: 'ai_pass',
+                player: aiColor,
+                reason: '无有效移动'
+            });
             console.log("AI passes");
             setIsAiThinking(false);
             setPlayerCanMove(true);
         }
     } catch (error) {
+        addDebugInfo({
+            type: 'ai_error',
+            player: aiColor,
+            error: error.message
+        });
         console.error('AI思考或落子出错:', error);
         setIsAiThinking(false);
         setPlayerCanMove(true);

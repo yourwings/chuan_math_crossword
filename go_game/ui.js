@@ -1,7 +1,7 @@
 
 import { drawBoard, initBoardState, getStoneLibertiesAt } from './board.js';
 import { aiMove } from './ai.js';
-import { startGame, resetGame, getBoard, getCurrentPlayer, getBlackCaptures, getWhiteCaptures, getGameEnded, calculateScore, getGameStarted, getIsAiThinking, placeStoneAndUpdate, checkGameEnd, switchPlayer, getBoardSize, setBoardSize, getPlayerCanMove, setPlayerCanMove, getBlackTime, getWhiteTime } from './gameLogic.js';
+import { startGame, resetGame, getBoard, getCurrentPlayer, getBlackCaptures, getWhiteCaptures, getGameEnded, calculateScore, getGameStarted, getIsAiThinking, placeStoneAndUpdate, checkGameEnd, switchPlayer, getBoardSize, setBoardSize, getPlayerCanMove, setPlayerCanMove, getBlackTime, getWhiteTime, getDebugLog, clearDebugLog } from './gameLogic.js';
 
 const canvas = document.getElementById('goBoard');
 const ctx = canvas.getContext('2d');
@@ -21,6 +21,9 @@ const gameEndTitle = document.getElementById('gameEndTitle');
 const gameEndContent = document.getElementById('gameEndContent');
 const closeModal = document.getElementById('closeModal');
 const closeModalButton = document.getElementById('closeModalButton');
+const debugButton = document.getElementById('debugButton');
+const debugInfo = document.getElementById('debugInfo');
+const debugContent = document.getElementById('debugContent');
 
 // 格式化时间显示
 function formatTime(seconds) {
@@ -66,6 +69,96 @@ export function showToast(message) {
     setTimeout(() => {
         toast.className = toast.className.replace('show', '');
     }, 5000); // 增加显示时间到5秒
+}
+
+// Debug功能
+function toggleDebugInfo() {
+    if (debugInfo.style.display === 'none') {
+        debugInfo.style.display = 'block';
+        updateDebugDisplay();
+        debugButton.textContent = '隐藏调试';
+    } else {
+        debugInfo.style.display = 'none';
+        debugButton.textContent = '调试信息';
+    }
+}
+
+function updateDebugDisplay() {
+    const logs = getDebugLog();
+    if (logs.length === 0) {
+        debugContent.textContent = '暂无调试信息';
+        return;
+    }
+    
+    let debugText = '';
+    logs.forEach((log, index) => {
+        debugText += `=== ${log.move > 0 ? `第${log.move}手` : '事件'} (${log.timestamp}) ===\n`;
+        
+        // 根据不同类型显示不同信息
+        switch(log.type) {
+            case 'valid_move':
+                debugText += `类型: 有效落子\n`;
+                debugText += `玩家: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `位置: ${log.position}\n`;
+                debugText += `提子数: ${log.capturedStones}\n`;
+                if (log.capturedPositions && log.capturedPositions.length > 0) {
+                    debugText += `被提位置: ${log.capturedPositions.join(', ')}\n`;
+                }
+                debugText += `黑棋总提子: ${log.blackCaptures}\n`;
+                debugText += `白棋总提子: ${log.whiteCaptures}\n`;
+                break;
+                
+            case 'invalid_move':
+                debugText += `类型: 无效落子\n`;
+                debugText += `玩家: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `位置: ${log.position}\n`;
+                debugText += `失败原因: ${log.reason}\n`;
+                break;
+                
+            case 'player_switch':
+                debugText += `类型: 回合切换\n`;
+                debugText += `从: ${log.from === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `到: ${log.to === 'black' ? '黑棋' : '白棋'}\n`;
+                break;
+                
+            case 'ai_thinking_start':
+                debugText += `类型: AI开始思考\n`;
+                debugText += `AI颜色: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `模拟次数: ${log.simulations}\n`;
+                debugText += `棋盘大小: ${log.boardSize}x${log.boardSize}\n`;
+                break;
+                
+            case 'ai_move_selected':
+                debugText += `类型: AI选择移动\n`;
+                debugText += `AI颜色: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `选择位置: ${log.position}\n`;
+                debugText += `访问次数: ${log.visits}\n`;
+                debugText += `胜率: ${log.winRate}\n`;
+                break;
+                
+            case 'ai_pass':
+                debugText += `类型: AI弃权\n`;
+                debugText += `AI颜色: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `原因: ${log.reason}\n`;
+                break;
+                
+            case 'ai_error':
+                debugText += `类型: AI错误\n`;
+                debugText += `AI颜色: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                debugText += `错误信息: ${log.error}\n`;
+                break;
+                
+            default:
+                debugText += `类型: ${log.type}\n`;
+                if (log.player) {
+                    debugText += `玩家: ${log.player === 'black' ? '黑棋' : '白棋'}\n`;
+                }
+        }
+        
+        debugText += '\n';
+    });
+    
+    debugContent.textContent = debugText;
 }
 
 // 处理游戏结束
@@ -245,6 +338,11 @@ function executePlayerMove(row, col) {
         // 开始AI思考
         startAITurn();
         
+        // 更新debug显示
+        if (debugInfo.style.display === 'block') {
+            updateDebugDisplay();
+        }
+        
     }).then(success => {
         if (!success) {
             // 落子失败，恢复等待状态
@@ -279,6 +377,11 @@ function startAITurn() {
             updateStatus();
             currentGameState = GAME_STATE.WAITING_FOR_PLAYER;
             
+            // 更新debug显示
+            if (debugInfo.style.display === 'block') {
+                updateDebugDisplay();
+            }
+            
         }).catch(error => {
             console.error('AI落子出错:', error);
             // AI出错时也要恢复玩家回合
@@ -311,6 +414,9 @@ export function setupEventListeners() {
         // 返回主页面
         window.location.href = '../index.html';
     });
+    
+    // Debug按钮事件监听器
+    debugButton.addEventListener('click', toggleDebugInfo);
     
     // 棋盘大小切换事件
     boardSizeSelect.addEventListener('change', (event) => {

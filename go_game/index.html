@@ -57,10 +57,18 @@
              </div>
          </div>
      </div>
-     <canvas id="goBoard" width="600" height="600"></canvas>
+    
+    <!-- Debug信息显示区域 -->
+    <div id="debugInfo" class="debug-info" style="display: none;">
+        <h4>调试信息</h4>
+        <div id="debugContent"></div>
+    </div>
+    
+    <canvas id="goBoard" width="600" height="600"></canvas>
     <div class="controls">
         <button id="passButton">弃权</button>
         <button id="resetButton">重置</button>
+        <button id="debugButton">调试信息</button>
         <button id="homeButton">返回主页</button>
     </div>
     <div class="board-size-selection">

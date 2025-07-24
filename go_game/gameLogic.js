@@ -24,6 +24,8 @@ let blackTime = 0; // 黑棋用时（秒）
 let whiteTime = 0; // 白棋用时（秒）
 let gameTimer = null; // 游戏计时器
 let gameStartTime = null; // 当前玩家开始思考的时间
+let debugLog = []; // 调试日志
+let moveCounter = 0; // 落子计数器
 
 export function getBoard() {
     return board;
@@ -95,6 +97,23 @@ export function getWhiteTime() {
     return whiteTime;
 }
 
+export function getDebugLog() {
+    return debugLog;
+}
+
+export function clearDebugLog() {
+    debugLog = [];
+    moveCounter = 0;
+}
+
+export function addDebugInfo(info) {
+    debugLog.push({
+        timestamp: new Date().toLocaleTimeString(),
+        move: moveCounter,
+        ...info
+    });
+}
+
 export function startTimer() {
     if (gameTimer) clearInterval(gameTimer);
     gameStartTime = Date.now();
@@ -134,6 +153,7 @@ export function startGame() {
     playerCanMove = true;
     resetTimer();
     startTimer();
+    clearDebugLog(); // 清空调试日志
     // drawBoard(board, ctx, canvas); // This will be handled by UI
     // updateStatus(); // This will be handled by UI
 }
@@ -147,9 +167,18 @@ export function resetGame() {
 
 export async function placeStoneAndUpdate(row, col, color, ctx, canvas, callback) {
     if (!isValidMove(row, col, color, board, false, lastMove)) {
+        addDebugInfo({
+            type: 'invalid_move',
+            player: color,
+            position: `(${row}, ${col})`,
+            reason: '不符合围棋规则'
+        });
         return false;
     }
 
+    // 增加落子计数
+    moveCounter++;
+    
     // 禁用玩家移动，防止快速点击
     setPlayerCanMove(false);
 
@@ -182,6 +211,24 @@ export async function placeStoneAndUpdate(row, col, color, ctx, canvas, callback
     }
 
     lastMove = [row, col];
+    
+    // 记录debug信息
+    addDebugInfo({
+        type: 'valid_move',
+        player: color,
+        position: `(${row}, ${col})`,
+        capturedStones: capturedStones.length,
+        capturedPositions: capturedStones.map(([r, c]) => `(${r}, ${c})`),
+        boardState: board.map(row => row.slice()), // 深拷贝当前棋盘状态
+        blackCaptures: blackCaptures,
+        whiteCaptures: whiteCaptures,
+        gameState: {
+            currentPlayer: currentPlayer,
+            gameStarted: gameStarted,
+            gameEnded: gameEnded,
+            isAiThinking: isAiThinking
+        }
+    });
 
     // 先更新棋盘状态（落子）
     board[row][col] = color;
@@ -257,7 +304,20 @@ function getLibertiesFromBoard(group, boardState) {
 }
 
 export function switchPlayer() {
+    const previousPlayer = currentPlayer;
     currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+    
+    // 记录回合切换
+    addDebugInfo({
+        type: 'player_switch',
+        from: previousPlayer,
+        to: currentPlayer,
+        gameState: {
+            gameStarted: gameStarted,
+            gameEnded: gameEnded,
+            isAiThinking: isAiThinking
+        }
+    });
     
     // 重启计时器
     startTimer();
