@@ -20,12 +20,14 @@ let gameEnded = false;
 let isAiThinking = false;
 let lastMove = null; // To store the last move for Ko rule
 let playerCanMove = true; // 控制玩家是否可以落子
-let blackTime = 0; // 黑棋用时（秒）
-let whiteTime = 0; // 白棋用时（秒）
+let blackTime = 0; // 黑棋总用时（秒）
+let whiteTime = 0; // 白棋总用时（秒）
 let gameTimer = null; // 游戏计时器
 let gameStartTime = null; // 当前玩家开始思考的时间
+let currentTurnStartTime = null; // 当前回合开始时间
 let debugLog = []; // 调试日志
 let moveCounter = 0; // 落子计数器
+let moveHistory = []; // 落子历史记录
 
 export function getBoard() {
     return board;
@@ -97,6 +99,17 @@ export function getWhiteTime() {
     return whiteTime;
 }
 
+export function getCurrentTurnTime() {
+    if (currentTurnStartTime) {
+        return Math.floor((Date.now() - currentTurnStartTime) / 1000);
+    }
+    return 0;
+}
+
+export function getMoveHistory() {
+    return moveHistory;
+}
+
 export function getDebugLog() {
     return debugLog;
 }
@@ -116,29 +129,36 @@ export function addDebugInfo(info) {
 
 export function startTimer() {
     if (gameTimer) clearInterval(gameTimer);
-    gameStartTime = Date.now();
+    currentTurnStartTime = Date.now();
+    gameStartTime = gameStartTime || Date.now(); // 只在第一次设置游戏开始时间
     gameTimer = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
-        if (currentPlayer === 'black') {
-            blackTime = elapsed;
-        } else {
-            whiteTime = elapsed;
-        }
+        // 计时器只用于UI更新，实际时间在stopTimer时累加
     }, 1000);
 }
 
 export function stopTimer() {
-    if (gameTimer) {
+    if (gameTimer && currentTurnStartTime) {
+        const turnDuration = Math.floor((Date.now() - currentTurnStartTime) / 1000);
+        if (currentPlayer === 'black') {
+            blackTime += turnDuration;
+        } else {
+            whiteTime += turnDuration;
+        }
         clearInterval(gameTimer);
         gameTimer = null;
+        currentTurnStartTime = null;
     }
 }
 
 export function resetTimer() {
-    stopTimer();
+    if (gameTimer) {
+        clearInterval(gameTimer);
+        gameTimer = null;
+    }
     blackTime = 0;
     whiteTime = 0;
     gameStartTime = null;
+    currentTurnStartTime = null;
 }
 
 export function startGame() {
@@ -161,6 +181,8 @@ export function startGame() {
 export function resetGame() {
     // 停止当前计时器
     stopTimer();
+    // 清空落子历史
+    moveHistory = [];
     // 重新开始游戏
     startGame();
 }
@@ -211,6 +233,15 @@ export async function placeStoneAndUpdate(row, col, color, ctx, canvas, callback
     }
 
     lastMove = [row, col];
+    
+    // 记录落子历史
+    moveHistory.push({
+        moveNumber: moveCounter,
+        player: color,
+        position: { row: row, col: col },
+        capturedStones: capturedStones.length,
+        timestamp: new Date().toISOString()
+    });
     
     // 记录debug信息
     addDebugInfo({
@@ -305,6 +336,10 @@ function getLibertiesFromBoard(group, boardState) {
 
 export function switchPlayer() {
     const previousPlayer = currentPlayer;
+    
+    // 停止当前玩家的计时
+    stopTimer();
+    
     currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
     
     // 记录回合切换
@@ -319,7 +354,7 @@ export function switchPlayer() {
         }
     });
     
-    // 重启计时器
+    // 开始新玩家的计时
     startTimer();
 }
 

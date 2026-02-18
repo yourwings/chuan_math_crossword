@@ -657,7 +657,7 @@ function initSoloExploration(isCreatorMode = false) {
   
   // 根据模式选择正确的元素ID
   const startStationElement = isCreatorMode ? document.getElementById('creator-start-station') : document.getElementById('start-station');
-  const endStationElement = isCreatorMode ? document.getElementById('creator-end-station') : document.getElementById('end-station');
+  let endStationElement = isCreatorMode ? document.getElementById('creator-end-station') : document.getElementById('end-station');
   const currentPathElement = isCreatorMode ? document.getElementById('creator-current-path') : document.getElementById('current-path');
   const playerHandElement = isCreatorMode ? document.getElementById('creator-player-hand') : document.getElementById('player-hand');
   

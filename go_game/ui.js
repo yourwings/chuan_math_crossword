@@ -1,7 +1,7 @@
 
 import { drawBoard, initBoardState, getStoneLibertiesAt } from './board.js';
 import { aiMove } from './ai.js';
-import { startGame, resetGame, getBoard, getCurrentPlayer, getBlackCaptures, getWhiteCaptures, getGameEnded, calculateScore, getGameStarted, getIsAiThinking, placeStoneAndUpdate, checkGameEnd, switchPlayer, getBoardSize, setBoardSize, getPlayerCanMove, setPlayerCanMove, getBlackTime, getWhiteTime, getDebugLog, clearDebugLog } from './gameLogic.js';
+import { startGame, resetGame, getBoard, getCurrentPlayer, getBlackCaptures, getWhiteCaptures, getGameEnded, calculateScore, getGameStarted, getIsAiThinking, placeStoneAndUpdate, checkGameEnd, switchPlayer, getBoardSize, setBoardSize, getPlayerCanMove, setPlayerCanMove, getBlackTime, getWhiteTime, getCurrentTurnTime, getMoveHistory, getDebugLog, clearDebugLog } from './gameLogic.js';
 
 const canvas = document.getElementById('goBoard');
 const ctx = canvas.getContext('2d');
@@ -56,19 +56,58 @@ export function updateStatus() {
     blackCapturesSpan.textContent = getBlackCaptures();
     whiteCapturesSpan.textContent = getWhiteCaptures();
     
-    // 更新计时器显示
-    blackTimerSpan.textContent = formatTime(getBlackTime());
-    whiteTimerSpan.textContent = formatTime(getWhiteTime());
+    // 更新计时器显示（总时间 + 当前回合时间）
+    const currentTurnTime = getCurrentTurnTime();
+    if (getCurrentPlayer() === 'black') {
+        blackTimerSpan.textContent = formatTime(getBlackTime() + currentTurnTime);
+        whiteTimerSpan.textContent = formatTime(getWhiteTime());
+    } else {
+        blackTimerSpan.textContent = formatTime(getBlackTime());
+        whiteTimerSpan.textContent = formatTime(getWhiteTime() + currentTurnTime);
+    }
 }
+
+let lastToastMessage = '';
+let lastToastTime = 0;
+let toastTimeout = null;
 
 export function showToast(message) {
     const toast = document.getElementById('toast');
+    const now = Date.now();
+    
+    // 防抖：如果是相同消息且在2秒内，则不重复显示
+    if (message === lastToastMessage && (now - lastToastTime) < 2000) {
+        return;
+    }
+    
+    // 清除之前的定时器
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+    }
+    
     // 支持换行显示
     toast.innerHTML = message.replace(/\n/g, '<br>');
     toast.className = 'show';
-    setTimeout(() => {
+    
+    lastToastMessage = message;
+    lastToastTime = now;
+    
+    toastTimeout = setTimeout(() => {
         toast.className = toast.className.replace('show', '');
-    }, 5000); // 增加显示时间到5秒
+        toastTimeout = null;
+    }, 3000); // 减少显示时间到3秒，避免过长遮挡
+}
+
+// 清除当前显示的toast
+export function clearToast() {
+    const toast = document.getElementById('toast');
+    if (toastTimeout) {
+        clearTimeout(toastTimeout);
+        toastTimeout = null;
+    }
+    toast.className = toast.className.replace('show', '');
+    lastToastMessage = '';
+    lastToastTime = 0;
 }
 
 // Debug功能
@@ -226,6 +265,36 @@ function handleGameEnd(gameEndResult) {
             </div>
         </div>
         
+        <div class="time-summary">
+            <h4>用时统计</h4>
+            <div class="time-breakdown">
+                <div class="time-item">
+                    <span class="time-label">黑棋总用时：</span>
+                    <span class="time-value">${formatTime(getBlackTime())}</span>
+                </div>
+                <div class="time-item">
+                    <span class="time-label">白棋总用时：</span>
+                    <span class="time-value">${formatTime(getWhiteTime())}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="move-history">
+            <h4>落子历史</h4>
+            <div class="move-list">
+                ${getMoveHistory().map(move => {
+                    const playerName = move.player === 'black' ? '黑棋' : '白棋';
+                    const captureText = move.capturedStones > 0 ? ` (提${move.capturedStones}子)` : '';
+                    return `<div class="move-item">
+                        <span class="move-number">${move.moveNumber}.</span>
+                        <span class="move-player ${move.player}">${playerName}</span>
+                        <span class="move-position">(${move.position.row + 1}, ${move.position.col + 1})</span>
+                        <span class="move-capture">${captureText}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+        
         <div class="rules-info">
             <h4>计分规则</h4>
             <p><strong>贴目规则：</strong>${score.chineseRules.komiRule}</p>
@@ -262,10 +331,11 @@ export function handleBoardClick(event) {
     
     // 严格的状态机检查 - 只有在等待玩家状态下才能落子
     if (currentGameState !== GAME_STATE.WAITING_FOR_PLAYER) {
+        // 只在用户首次点击时显示提示，避免频繁显示
         if (currentGameState === GAME_STATE.AI_THINKING) {
-            showToast("AI正在思考，请稍候。");
+            showToast("AI正在思考中...");
         } else if (currentGameState === GAME_STATE.PROCESSING_MOVE) {
-            showToast("正在处理落子，请稍候。");
+            showToast("正在处理落子中...");
         }
         return;
     }
@@ -361,6 +431,9 @@ function executePlayerMove(row, col) {
 function startAITurn() {
     currentGameState = GAME_STATE.AI_THINKING;
     
+    // 清除之前的toast提示，避免干扰
+    clearToast();
+    
     setTimeout(() => {
         aiMove(ctx, canvas).then(() => {
             updateStatus();
@@ -395,6 +468,7 @@ function startAITurn() {
 export function setupEventListeners() {
     canvas.addEventListener('click', handleBoardClick);
     startGameBtn.addEventListener('click', () => {
+        clearToast(); // 清除之前的提示
         startGame();
         drawBoard(getBoard(), ctx, canvas);
         updateStatus();
@@ -402,6 +476,7 @@ export function setupEventListeners() {
         currentGameState = GAME_STATE.WAITING_FOR_PLAYER;
     });
     resetGameBtn.addEventListener('click', () => {
+        clearToast(); // 清除之前的提示
         resetGame();
         initBoardState(getBoardSize(), canvas, ctx); // 同步重置board.js状态
         drawBoard(getBoard(), ctx, canvas);

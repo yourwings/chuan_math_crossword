@@ -217,6 +217,10 @@ h1 {
     border-radius: 8px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     text-align: center;
+    min-height: 100px; /* 确保所有面板最小高度一致 */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .current-player-panel h3,
@@ -278,10 +282,12 @@ h1 {
     font-weight: bold;
 }
 
-.timers {
+.timers,
+.captures {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-height: 60px; /* 确保最小高度一致 */
 }
 
 .timer-item,
@@ -289,6 +295,7 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 24px; /* 确保每行最小高度一致 */
 }
 
 .timer-label,
@@ -302,12 +309,6 @@ h1 {
     font-size: 14px;
     font-weight: bold;
     color: #2c3e50;
-}
-
-.captures {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
 }
 
 canvas {
@@ -639,13 +640,22 @@ button:hover {
     gap: 10px;
 }
 
-.score-item, .territory-item, .capture-item {
+.score-item, .territory-item, .time-item {
     display: flex;
     justify-content: space-between;
     padding: 8px;
     background-color: white;
     border-radius: 4px;
     border-left: 3px solid #8B4513;
+}
+
+.capture-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    /* 移除左边框，避免在提子统计面板中显示多余竖线 */
 }
 
 .score-label, .territory-label, .capture-label {
@@ -668,8 +678,69 @@ button:hover {
     color: #8B4513;
 }
 
+/* 落子历史样式 */
+.move-history {
+    margin-top: 15px;
+}
+
+.move-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: #f9f9f9;
+}
+
+.move-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 5px;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.move-item:last-child {
+    border-bottom: none;
+}
+
+.move-number {
+    width: 25px;
+    font-weight: bold;
+    color: #666;
+}
+
+.move-player {
+    width: 40px;
+    font-weight: bold;
+}
+
+.move-player.black {
+    color: #2c3e50;
+}
+
+.move-player.white {
+    color: #7f8c8d;
+}
+
+.move-position {
+    width: 60px;
+    color: #333;
+}
+
+.move-capture {
+    color: #e74c3c;
+    font-size: 11px;
+}
+
+.time-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
 @media (max-width: 480px) {
-    .score-breakdown, .territory-breakdown, .capture-breakdown {
+    .score-breakdown, .territory-breakdown, .capture-breakdown, .time-breakdown {
         grid-template-columns: 1fr;
     }
     

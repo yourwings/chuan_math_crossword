@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小川成语接龙</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>小川成语接龙</h1>
+        <div class="controls-row">
+            <div class="setting-item">
+                <label for="chain-length">接龙数目：</label>
+                <input type="number" id="chain-length" min="5" max="50" step="5" value="10">
+            </div>
+            <button id="start-btn">开始游戏</button>
+            <button id="restart-btn" disabled>重新开始</button>
+            <button id="back-btn">返回</button>
+        </div>
+        <div class="game-info">
+            <div id="round-info" class="info-badge">第 0 / 0 题</div>
+            <div id="correct-info" class="info-badge">已答对: 0</div>
+            <div id="status" class="status"></div>
+        </div>
+        <div class="question-area">
+            <div class="label">当前成语：</div>
+            <div id="current-idiom" class="current-idiom">请点击“开始游戏”</div>
+        </div>
+        <div id="options-container" class="options-container"></div>
+        <div class="game-instructions">
+            <p>游戏规则：</p>
+            <ul>
+                <li>系统从常用成语库中随机选取一个成语作为题目。</li>
+                <li>从四个候选成语中选择一个，使其首字与题目成语的末字相同，完成接龙。</li>
+                <li>如果选对，该成语将成为下一题的题目，继续接龙。</li>
+                <li>如果选错，有一次重新作答的机会；第二次仍然错误，则接龙结束。</li>
+                <li>开始时可以选择目标接龙数目，最后会统计实际答对的数目。</li>
+            </ul>
+        </div>
+    </div>
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>成语接龙结果</h2>
+            <div id="game-result"></div>
+            <button id="play-again-btn">再来一次</button>
+            <button id="return-home-btn">返回主页</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
+

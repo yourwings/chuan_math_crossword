@@ -1,4 +1,4 @@
-import { getBoard, getCurrentPlayer, setBoard, setLastMove, setIsAiThinking, switchPlayer, getGameEnded, getGameStarted, getIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove, addDebugInfo } from './gameLogic.js';
+import { getBoard, getCurrentPlayer, setBoard, setLastMove, setIsAiThinking, switchPlayer, getGameEnded, getGameStarted, getIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove, addDebugInfo, startTimer, stopTimer } from './gameLogic.js';
 import { isValidMove, checkCapturesSimulation, removeCapturedStones } from './board.js';
 
 // 位置价值表 - 基于围棋理论的位置重要性
@@ -581,7 +581,7 @@ class MCTSNode {
         if (this.children.length === 0) return null;
         
         // 使用更稳健的选择策略
-        return this.children.reduce((best, child) => {
+        const bestChild = this.children.reduce((best, child) => {
             const childScore = child.visits > 0 ? child.wins / child.visits : 0;
             const bestScore = best.visits > 0 ? best.wins / best.visits : 0;
             
@@ -590,7 +590,15 @@ class MCTSNode {
             const bestValue = bestScore + Math.log(best.visits + 1) * 0.1;
             
             return childValue > bestValue ? child : best;
-        }).move;
+        });
+        
+        // 返回包含完整信息的对象
+        return {
+            r: bestChild.move.r,
+            c: bestChild.move.c,
+            visits: bestChild.visits,
+            winRate: bestChild.visits > 0 ? (bestChild.wins / bestChild.visits * 100).toFixed(1) + '%' : '0%'
+        };
     }
 }
 
@@ -718,6 +726,9 @@ export async function aiMove(ctx, canvas) {
     const aiColor = getCurrentPlayer();
     const simulations = getAIDifficulty();
     
+    // 启动AI思考计时器
+    startTimer();
+    
     try {
         // 记录AI开始思考
         addDebugInfo({
@@ -736,11 +747,13 @@ export async function aiMove(ctx, canvas) {
                 type: 'ai_move_selected',
                 player: aiColor,
                 position: `(${bestMove.r}, ${bestMove.c})`,
-                visits: bestMove.visits || 'unknown',
-                winRate: bestMove.winRate || 'unknown'
+                visits: bestMove.visits,
+                winRate: bestMove.winRate
             });
             
             await placeStoneAndUpdate(bestMove.r, bestMove.c, aiColor, ctx, canvas, () => {
+                // 停止AI思考计时器
+                stopTimer();
                 setIsAiThinking(false);
                 setPlayerCanMove(true);
             });
@@ -752,6 +765,8 @@ export async function aiMove(ctx, canvas) {
                 reason: '无有效移动'
             });
             console.log("AI passes");
+            // 停止AI思考计时器
+            stopTimer();
             setIsAiThinking(false);
             setPlayerCanMove(true);
         }
@@ -762,6 +777,8 @@ export async function aiMove(ctx, canvas) {
             error: error.message
         });
         console.error('AI思考或落子出错:', error);
+        // 停止AI思考计时器
+        stopTimer();
         setIsAiThinking(false);
         setPlayerCanMove(true);
     }
