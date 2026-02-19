@@ -1,0 +1,254 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.game-container {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    text-align: center;
+    max-width: 900px;
+    width: 100%;
+}
+
+h1 {
+    color: #2196F3;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.mode-switch {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.mode-button {
+    background-color: #e3f2fd;
+    color: #2196F3;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.mode-button.active {
+    background-color: #2196F3;
+    color: white;
+}
+
+.game-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.question-settings {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.question-settings label {
+    font-weight: bold;
+    color: #555;
+}
+
+.question-settings input {
+    width: 80px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.info-badge {
+    padding: 6px 12px;
+    border-radius: 5px;
+    background-color: #e3f2fd;
+    color: #2196F3;
+    font-weight: bold;
+    min-width: 150px;
+}
+
+.status {
+    min-width: 200px;
+    padding: 6px 12px;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    color: #555;
+    font-weight: bold;
+    min-height: 24px;
+    margin-bottom: 20px;
+}
+
+.question-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.question-area .label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #555;
+}
+
+.question-text {
+    font-size: 26px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: #fff3e0;
+    color: #ff9800;
+    border-left: 4px solid #ff9800;
+}
+
+.input-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.input-area input {
+    width: 260px;
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+}
+
+.keyboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 360px;
+}
+
+.keyboard-row {
+    display: flex;
+    gap: 6px;
+}
+
+.key-button {
+    min-width: 32px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.key-button.wide {
+    min-width: 60px;
+}
+
+button {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0b7dda;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.options-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.option-button {
+    font-size: 18px;
+}
+
+.option-button.correct {
+    background-color: #4CAF50;
+}
+
+.option-button.wrong {
+    background-color: #f44336;
+}
+
+.control-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.game-instructions {
+    margin-top: 20px;
+    text-align: left;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: #555;
+}
+
+.game-instructions ul {
+    padding-left: 20px;
+}
+
+@media (max-width: 600px) {
+    .game-container {
+        padding: 15px;
+    }
+
+    .question-text {
+        font-size: 22px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .option-button {
+        font-size: 16px;
+        padding: 8px 10px;
+    }
+
+    button {
+        width: auto;
+    }
+}

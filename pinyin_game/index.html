@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼音小练兵</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>拼音小练兵</h1>
+        <div class="mode-switch">
+            <button id="mode-char-to-pinyin" class="mode-button active">汉字 → 拼音</button>
+            <button id="mode-pinyin-to-char" class="mode-button">拼音 → 词语</button>
+        </div>
+        <div class="game-info">
+            <div id="mode-description" class="info-badge"></div>
+            <div id="score-info" class="info-badge"></div>
+        </div>
+        <div class="question-settings">
+            <label for="question-count">本轮题目数量：</label>
+            <input id="question-count" type="number" min="5" max="50" value="10">
+        </div>
+        <div id="status" class="status"></div>
+        <div class="question-area">
+            <div class="label" id="question-label"></div>
+            <div id="question-text" class="question-text"></div>
+        </div>
+        <div id="input-area" class="input-area">
+            <input id="pinyin-input" type="text" placeholder="请输入拼音，例如：xue xiao">
+            <button id="submit-btn">提交答案</button>
+            <div id="keyboard" class="keyboard">
+                <div class="keyboard-row">
+                    <button class="key-button" data-key="q">Q</button>
+                    <button class="key-button" data-key="w">W</button>
+                    <button class="key-button" data-key="e">E</button>
+                    <button class="key-button" data-key="r">R</button>
+                    <button class="key-button" data-key="t">T</button>
+                    <button class="key-button" data-key="y">Y</button>
+                    <button class="key-button" data-key="u">U</button>
+                    <button class="key-button" data-key="i">I</button>
+                    <button class="key-button" data-key="o">O</button>
+                    <button class="key-button" data-key="p">P</button>
+                </div>
+                <div class="keyboard-row">
+                    <button class="key-button" data-key="a">A</button>
+                    <button class="key-button" data-key="s">S</button>
+                    <button class="key-button" data-key="d">D</button>
+                    <button class="key-button" data-key="f">F</button>
+                    <button class="key-button" data-key="g">G</button>
+                    <button class="key-button" data-key="h">H</button>
+                    <button class="key-button" data-key="j">J</button>
+                    <button class="key-button" data-key="k">K</button>
+                    <button class="key-button" data-key="l">L</button>
+                </div>
+                <div class="keyboard-row">
+                    <button class="key-button" data-key="z">Z</button>
+                    <button class="key-button" data-key="x">X</button>
+                    <button class="key-button" data-key="c">C</button>
+                    <button class="key-button" data-key="v">V</button>
+                    <button class="key-button" data-key="b">B</button>
+                    <button class="key-button" data-key="n">N</button>
+                    <button class="key-button" data-key="m">M</button>
+                    <button class="key-button wide" data-key="SPACE">空格</button>
+                    <button class="key-button wide" data-key="BACKSPACE">退格</button>
+                    <button class="key-button wide" data-key="CLEAR">清空</button>
+                </div>
+            </div>
+        </div>
+        <div id="options-container" class="options-container"></div>
+        <div class="control-row">
+            <button id="next-btn">下一题</button>
+            <button id="back-btn">返回首页</button>
+        </div>
+        <div class="game-instructions">
+            <p>玩法说明：</p>
+            <ul>
+                <li>支持两种模式：根据汉字输入拼音，或根据拼音选择正确词语。</li>
+                <li>拼音不区分大小写，空格可选，但字母顺序需完全正确。</li>
+                <li>每道题答完后可点击“下一题”继续练习。</li>
+            </ul>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
