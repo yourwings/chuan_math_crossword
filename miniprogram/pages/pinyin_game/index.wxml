@@ -1,0 +1,67 @@
+<view class="container">
+  <view class="game-container">
+    <view class="title">拼音小练兵</view>
+    
+    <view class="mode-switch">
+      <button class="mode-button {{currentMode === 'char_to_pinyin' ? 'active' : ''}}" bindtap="setMode" data-mode="char_to_pinyin">汉字 → 拼音</button>
+      <button class="mode-button {{currentMode === 'pinyin_to_char' ? 'active' : ''}}" bindtap="setMode" data-mode="pinyin_to_char">拼音 → 词语</button>
+    </view>
+
+    <view class="question-settings">
+      <text class="label">本轮题目数量：</text>
+      <input class="input" type="number" value="{{questionLimit}}" bindinput="onLimitInput" />
+    </view>
+
+    <view class="game-info">
+      <view class="info-badge">正确题数：{{score}} / {{total}}</view>
+      <view class="info-badge">上限：{{questionLimit}}</view>
+    </view>
+
+    <view class="status">{{status}}</view>
+
+    <view class="question-area">
+      <text class="label">{{currentMode === 'char_to_pinyin' ? '汉字：' : '拼音：'}}</text>
+      <view class="question-text">{{currentMode === 'char_to_pinyin' ? currentItem.text : currentItem.pinyin}}</view>
+    </view>
+
+    <!-- 模式1：汉字转拼音 -->
+    <view class="input-area" wx:if="{{currentMode === 'char_to_pinyin'}}">
+      <input class="pinyin-input" value="{{userInput}}" placeholder="请输入拼音" bindinput="onUserInput" />
+      <button class="btn submit-btn" bindtap="handleSubmit" disabled="{{answered}}">提交答案</button>
+      
+      <!-- 屏幕键盘 -->
+      <view class="keyboard">
+        <view class="keyboard-row" wx:for="{{keyboardRows}}" wx:for-item="row" wx:key="index">
+          <button 
+            wx:for="{{row}}" 
+            wx:key="key" 
+            class="key-button {{item.wide ? 'wide' : ''}}" 
+            bindtap="onKeyTap" 
+            data-key="{{item.key}}"
+          >
+            {{item.label}}
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 模式2：拼音转汉字 -->
+    <view class="options-container" wx:if="{{currentMode === 'pinyin_to_char'}}">
+      <button 
+        wx:for="{{options}}" 
+        wx:key="text" 
+        class="option-button {{item.class}}" 
+        disabled="{{answered}}"
+        bindtap="onOptionClick" 
+        data-text="{{item.text}}"
+      >
+        {{item.text}}
+      </button>
+    </view>
+
+    <view class="control-row">
+      <button class="btn next-btn" bindtap="loadNextQuestion">下一题</button>
+      <button class="btn back-btn" bindtap="goBack">返回首页</button>
+    </view>
+  </view>
+</view>

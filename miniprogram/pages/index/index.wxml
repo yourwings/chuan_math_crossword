@@ -1,0 +1,36 @@
+<view class="container">
+  <view class="games-container">
+    <view class="title">小川数字迷宫</view>
+    <view class="games-description">
+      <text>欢迎来到小川数字迷宫！这是一个数字类游戏集合项目，旨在通过有趣的数学游戏提高玩家的数学思维能力。</text>
+      <text>\n选择下面的游戏开始您的数学冒险吧！</text>
+    </view>
+    
+    <view class="games-grid">
+      <view class="game-card" bindtap="goToGame" data-url="/pages/chengyu_chain/index">
+        <view class="game-name">成语接龙</view>
+        <view class="game-desc">从四个候选成语中选择一个，使首字与上一个成语的尾字相同，完成接龙挑战。</view>
+        <button class="play-button">开始游戏</button>
+      </view>
+      
+      <view class="game-card" bindtap="goToGame" data-url="/pages/pinyin_game/index">
+        <view class="game-name">拼音小练兵</view>
+        <view class="game-desc">通过汉字输入拼音或根据拼音选择词语，巩固小学常用词语和成语的拼音读音。</view>
+        <button class="play-button">开始游戏</button>
+      </view>
+
+      <!-- 其他游戏占位，后续可继续重构 -->
+      <view class="game-card coming-soon">
+        <view class="game-name">数字华容道</view>
+        <view class="game-desc">结合数学元素的华容道游戏，通过移动数字块完成拼图。</view>
+        <button class="play-button" disabled>敬请期待</button>
+      </view>
+
+      <view class="game-card coming-soon">
+        <view class="game-name">小川猜数字</view>
+        <view class="game-desc">记忆力挑战游戏，按顺序找出隐藏的数字，锻炼记忆力和观察力。</view>
+        <button class="play-button" disabled>敬请期待</button>
+      </view>
+    </view>
+  </view>
+</view>
