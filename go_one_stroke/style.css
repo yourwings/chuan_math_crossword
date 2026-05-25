@@ -1,0 +1,148 @@
+body {
+    font-family: 'STKaiti', 'Kaiti SC', 'PingFang SC', serif;
+    background-color: #f0e6d2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+}
+
+.game-container {
+    background-color: #dcbc8c;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    text-align: center;
+    max-width: 650px;
+    width: 100%;
+    border: 2px solid #8b4513;
+}
+
+h1 {
+    color: #4a2b11;
+    margin-top: 0;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #4a2b11;
+    font-weight: bold;
+}
+
+.board-wrapper {
+    background-color: #e6c591;
+    padding: 15px;
+    border-radius: 4px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
+}
+
+#game-canvas {
+    cursor: crosshair;
+    max-width: 100%;
+    height: auto;
+    touch-action: none;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+button {
+    padding: 12px 25px;
+    border-radius: 6px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 16px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+}
+
+button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+}
+
+#reset-btn {
+    background-color: #8b4513;
+    color: #f0e6d2;
+}
+
+#next-level-btn, #modal-next-btn {
+    background-color: #2e7d32;
+    color: white;
+}
+
+#back-btn, #modal-home-btn {
+    background-color: #5d4037;
+    color: white;
+}
+
+.game-instructions {
+    text-align: left;
+    background-color: rgba(255, 255, 255, 0.3);
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: #4a2b11;
+    font-size: 15px;
+}
+
+.game-instructions h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.game-instructions ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #f0e6d2;
+    padding: 40px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    border: 3px solid #8b4513;
+}
+
+.modal-content h2 {
+    color: #8b4513;
+    margin-top: 0;
+}
+
+.modal-content button {
+    margin: 10px;
+}
