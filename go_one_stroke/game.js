@@ -22,78 +22,69 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 游戏状态
     let currentLevelIndex = 0;
-    let playerPath = []; // 存储点击过的节点索引
+    let playerPath = []; // 存储点击过的节点索引 (按顺序)
+    let visitedNodes = new Set(); // 存储已访问的节点索引
     let isDragging = false;
     let lastNodeIndex = -1;
-    let completedEdges = new Set(); // 存储已完成的边 (格式: "min-max")
 
-    // 关卡数据
+    // 关卡数据 (哈密顿路径设计)
     const levels = [
         {
-            // 等级 1: 简单的三角形
+            // 等级 1: 简单的 U 形
             nodes: [
-                { x: 3, y: 3, color: 'black' },
-                { x: 9, y: 3, color: 'black' },
-                { x: 6, y: 9, color: 'black' }
+                { x: 4, y: 4, color: 'black' },
+                { x: 4, y: 8, color: 'black' },
+                { x: 8, y: 8, color: 'black' },
+                { x: 8, y: 4, color: 'black' }
             ],
-            edges: [[0, 1], [1, 2], [2, 0]]
+            edges: [[0, 1], [1, 2], [2, 3]]
         },
         {
-            // 等级 2: 正方形带对角线 (一笔画经典)
+            // 等级 2: Z 字形
             nodes: [
                 { x: 3, y: 3, color: 'white' },
                 { x: 9, y: 3, color: 'white' },
-                { x: 3, y: 9, color: 'white' },
-                { x: 9, y: 9, color: 'white' },
-                { x: 6, y: 6, color: 'black' }
+                { x: 3, y: 9, color: 'black' },
+                { x: 9, y: 9, color: 'black' }
+            ],
+            edges: [[0, 1], [1, 2], [2, 3]]
+        },
+        {
+            // 等级 3: 蛇形路径
+            nodes: [
+                { x: 2, y: 2, color: 'black' }, { x: 6, y: 2, color: 'black' }, { x: 10, y: 2, color: 'black' },
+                { x: 10, y: 6, color: 'white' }, { x: 6, y: 6, color: 'white' }, { x: 2, y: 6, color: 'white' },
+                { x: 2, y: 10, color: 'black' }, { x: 6, y: 10, color: 'black' }, { x: 10, y: 10, color: 'black' }
             ],
             edges: [
-                [0, 1], [1, 3], [3, 2], [2, 0],
-                [0, 4], [1, 4], [2, 4], [3, 4]
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8]
             ]
         },
         {
-            // 等级 3: 房子形状
+            // 等级 4: 螺旋
             nodes: [
-                { x: 3, y: 6, color: 'black' },
-                { x: 9, y: 6, color: 'black' },
-                { x: 3, y: 10, color: 'black' },
-                { x: 9, y: 10, color: 'black' },
-                { x: 6, y: 2, color: 'white' }
+                { x: 2, y: 2, color: 'black' }, { x: 10, y: 2, color: 'black' },
+                { x: 10, y: 10, color: 'black' }, { x: 2, y: 10, color: 'black' },
+                { x: 2, y: 6, color: 'white' }, { x: 6, y: 6, color: 'white' },
+                { x: 6, y: 4, color: 'white' }
             ],
             edges: [
-                [0, 1], [1, 3], [3, 2], [2, 0],
-                [0, 4], [1, 4], [0, 3] // 故意少一条对角线使其可一笔画
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]
             ]
         },
         {
-            // 等级 4: 星形
+            // 等级 5: 迷宫风格 (较难)
             nodes: [
-                { x: 6, y: 2, color: 'white' },
-                { x: 3, y: 10, color: 'black' },
-                { x: 10, y: 5, color: 'black' },
-                { x: 2, y: 5, color: 'black' },
-                { x: 9, y: 10, color: 'black' }
+                { x: 2, y: 2, color: 'black' }, { x: 4, y: 2, color: 'black' }, { x: 6, y: 2, color: 'black' },
+                { x: 6, y: 4, color: 'white' }, { x: 4, y: 4, color: 'white' }, { x: 2, y: 4, color: 'white' },
+                { x: 2, y: 6, color: 'black' }, { x: 4, y: 6, color: 'black' }, { x: 6, y: 6, color: 'black' },
+                { x: 8, y: 6, color: 'white' }, { x: 10, y: 6, color: 'white' },
+                { x: 10, y: 4, color: 'black' }, { x: 8, y: 4, color: 'black' },
+                { x: 8, y: 2, color: 'white' }, { x: 10, y: 2, color: 'white' }
             ],
             edges: [
-                [0, 1], [1, 2], [2, 3], [3, 4], [4, 0]
-            ]
-        },
-        {
-            // 等级 5: 复杂几何
-            nodes: [
-                { x: 2, y: 2, color: 'black' },
-                { x: 6, y: 2, color: 'white' },
-                { x: 10, y: 2, color: 'black' },
-                { x: 2, y: 6, color: 'white' },
-                { x: 10, y: 6, color: 'white' },
-                { x: 2, y: 10, color: 'black' },
-                { x: 6, y: 10, color: 'white' },
-                { x: 10, y: 10, color: 'black' }
-            ],
-            edges: [
-                [0, 1], [1, 2], [2, 4], [4, 7], [7, 6], [6, 5], [5, 3], [3, 0],
-                [1, 6], [3, 4]
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8],
+                [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]
             ]
         }
     ];
@@ -106,10 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const level = getLevel();
         levelNumEl.textContent = currentLevelIndex + 1;
         playerPath = [];
-        completedEdges.clear();
+        visitedNodes.clear();
         isDragging = false;
         lastNodeIndex = -1;
-        statusMsgEl.textContent = "连接所有棋子完成一笔画！";
+        statusMsgEl.textContent = "经过所有棋子各一次！";
         statusMsgEl.style.color = "#4a2b11";
         nextLevelBtn.style.display = 'none';
         draw();
@@ -130,20 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 画网格线
         for (let i = 0; i < BOARD_SIZE; i++) {
-            // 横线
             ctx.beginPath();
             ctx.moveTo(PADDING, PADDING + i * GRID_SPACING);
             ctx.lineTo(CANVAS_SIZE - PADDING, PADDING + i * GRID_SPACING);
             ctx.stroke();
 
-            // 纵线
             ctx.beginPath();
             ctx.moveTo(PADDING + i * GRID_SPACING, PADDING);
             ctx.lineTo(PADDING + i * GRID_SPACING, CANVAS_SIZE - PADDING);
             ctx.stroke();
         }
 
-        // 画星位 (13x13 棋盘通常在 4,4, 4,10, 10,4, 10,10, 7,7)
         const starPoints = [3, 6, 9];
         ctx.fillStyle = '#4a2b11';
         starPoints.forEach(ix => {
@@ -160,6 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         level.nodes.forEach((node, index) => {
             const x = PADDING + node.x * GRID_SPACING;
             const y = PADDING + node.y * GRID_SPACING;
+            const isVisited = visitedNodes.has(index);
 
             // 阴影
             ctx.beginPath();
@@ -173,15 +162,23 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const gradient = ctx.createRadialGradient(x - STONE_RADIUS/3, y - STONE_RADIUS/3, STONE_RADIUS/10, x, y, STONE_RADIUS);
             if (node.color === 'black') {
-                gradient.addColorStop(0, '#666');
-                gradient.addColorStop(1, '#000');
+                gradient.addColorStop(0, isVisited ? '#444' : '#666');
+                gradient.addColorStop(1, isVisited ? '#222' : '#000');
             } else {
-                gradient.addColorStop(0, '#fff');
-                gradient.addColorStop(1, '#ccc');
+                gradient.addColorStop(0, isVisited ? '#eee' : '#fff');
+                gradient.addColorStop(1, isVisited ? '#bbb' : '#ccc');
             }
             
             ctx.fillStyle = gradient;
             ctx.fill();
+
+            // 如果已访问，画一个完成标记
+            if (isVisited) {
+                ctx.beginPath();
+                ctx.arc(x, y, STONE_RADIUS * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = node.color === 'black' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)';
+                ctx.fill();
+            }
 
             // 如果是当前路径的最后一个节点，加一个高亮圈
             if (index === lastNodeIndex) {
@@ -198,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const level = getLevel();
         ctx.setLineDash([5, 5]);
         ctx.strokeStyle = 'rgba(74, 43, 17, 0.4)';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3;
 
         level.edges.forEach(edge => {
             const n1 = level.nodes[edge[0]];
@@ -217,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const level = getLevel();
         ctx.strokeStyle = '#f44336';
-        ctx.lineWidth = 6;
+        ctx.lineWidth = 5;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
 
@@ -274,8 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nodeIndex !== -1) {
             isDragging = true;
             playerPath = [nodeIndex];
+            visitedNodes.clear();
+            visitedNodes.add(nodeIndex);
             lastNodeIndex = nodeIndex;
-            completedEdges.clear();
+            statusMsgEl.textContent = "开始连接...";
+            statusMsgEl.style.color = "#4a2b11";
             draw();
         }
     }
@@ -288,26 +288,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (nodeIndex !== -1 && nodeIndex !== lastNodeIndex) {
             const level = getLevel();
-            // 检查这两个点之间是否有合法的边
-            const edgeKey = [lastNodeIndex, nodeIndex].sort((a, b) => a - b).join('-');
+            
+            // 检查是否有边连接
             const isValidEdge = level.edges.some(edge => {
-                const eKey = [...edge].sort((a, b) => a - b).join('-');
-                return eKey === edgeKey;
+                return (edge[0] === lastNodeIndex && edge[1] === nodeIndex) || 
+                       (edge[1] === lastNodeIndex && edge[0] === nodeIndex);
             });
 
             if (isValidEdge) {
-                // 检查这条边是否已经走过
-                if (completedEdges.has(edgeKey)) {
-                    // 如果走过，且正好是回退到上一个点，则允许回退（可选逻辑，这里简单化处理：不允许重复走）
-                    statusMsgEl.textContent = "不能重复经过同一条边！";
-                    statusMsgEl.style.color = "#f44336";
+                // 检查是否已经访问过
+                if (visitedNodes.has(nodeIndex)) {
+                    // 如果是回退到路径中的倒数第二个点，允许回退
+                    if (playerPath.length >= 2 && nodeIndex === playerPath[playerPath.length - 2]) {
+                        const removed = playerPath.pop();
+                        visitedNodes.delete(removed);
+                        lastNodeIndex = nodeIndex;
+                        statusMsgEl.textContent = "已回退";
+                    } else {
+                        statusMsgEl.textContent = "每个棋子只能经过一次！";
+                        statusMsgEl.style.color = "#f44336";
+                    }
                 } else {
                     playerPath.push(nodeIndex);
-                    completedEdges.add(edgeKey);
+                    visitedNodes.add(nodeIndex);
                     lastNodeIndex = nodeIndex;
                     statusMsgEl.textContent = "继续连接...";
                     statusMsgEl.style.color = "#4a2b11";
-                    
                     checkVictory();
                 }
                 draw();
@@ -317,12 +323,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleInputEnd() {
         isDragging = false;
-        // 如果没赢，则不做处理，保持当前路径，或者可以设置成松开就重置
     }
 
     function checkVictory() {
         const level = getLevel();
-        if (completedEdges.size === level.edges.length) {
+        if (visitedNodes.size === level.nodes.length) {
             statusMsgEl.textContent = "恭喜过关！";
             statusMsgEl.style.color = "#2e7d32";
             isDragging = false;
@@ -346,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handleInputStart(e);
-    });
+    }, { passive: false });
     window.addEventListener('touchmove', (e) => {
         handleInputMove(e);
     });
@@ -368,6 +373,5 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../index.html';
     });
 
-    // 初始化第一关
     initLevel();
 });
