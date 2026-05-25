@@ -28,11 +28,11 @@
         <div class="game-instructions">
             <h3>游戏规则</h3>
             <ul>
-                <li>棋盘上由黑白棋子组成了特定的图案。</li>
-                <li><strong>黑色棋子</strong>代表图案的顶点，<strong>白色棋子</strong>代表连接顶点的路径。</li>
-                <li>从任意棋子出发，通过滑动连接所有棋子。</li>
-                <li><strong>每个棋子（无论黑白）必须且只能经过一次</strong>。</li>
-                <li>经过所有棋子即为过关！</li>
+                <li><strong>黑色棋子</strong>为顶点，<strong>白色棋子</strong>为路径。</li>
+                <li>必须从任意一个<strong>黑色棋子</strong>（顶点）开始滑动。</li>
+                <li><strong>每个白色路径段只能经过一次</strong>。</li>
+                <li>判断标准：根据欧拉路径理论，只有奇点（连接边数为奇数的顶点）个数为 0 或 2 的图形才能一笔画。</li>
+                <li>走完所有白色棋子组成的路径即为过关！</li>
             </ul>
         </div>
     </div>
