@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1A2B 猜数字 - 小川数字迷宫</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>1A2B 猜数字</h1>
+        
+        <div class="settings">
+            <div class="setting-item">
+                <label for="digit-count">数字位数：</label>
+                <select id="digit-count">
+                    <option value="3">3位</option>
+                    <option value="4" selected>4位</option>
+                    <option value="5">5位</option>
+                </select>
+            </div>
+            <button id="new-game-btn">新游戏</button>
+            <button id="back-btn">返回主页</button>
+        </div>
+
+        <div id="game-play" class="game-play">
+            <div class="input-section">
+                <h3>请输入你的猜测：</h3>
+                <div id="digit-inputs-container" class="digit-inputs-container">
+                    <!-- 动态生成数字输入框 -->
+                </div>
+                <button id="guess-btn" class="guess-btn">提交猜测</button>
+            </div>
+            <div id="message" class="message"></div>
+            
+            <div class="history-container">
+                <h3>猜测历史</h3>
+                <div id="history-list" class="history-list">
+                    <!-- 猜测记录将在这里显示 -->
+                </div>
+            </div>
+        </div>
+
+        <div class="game-instructions">
+            <h3>游戏规则</h3>
+            <ul>
+                <li>系统会随机生成一个不重复的数字（首位可为0）。</li>
+                <li><strong>A</strong> 表示数字对且位置对。</li>
+                <li><strong>B</strong> 表示数字对但位置错。</li>
+                <li>例如：如果答案是 1234，你猜 1356，结果为 1A1B（1位置对，3数字对但位置错）。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">恭喜你！</h2>
+            <p id="modal-message"></p>
+            <button id="play-again-btn">再玩一次</button>
+            <button id="return-home-btn">返回主页</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
