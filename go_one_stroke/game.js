@@ -10,245 +10,184 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalNextBtn = document.getElementById('modal-next-btn');
     const modalHomeBtn = document.getElementById('modal-home-btn');
 
-    // 棋盘配置
-    const BOARD_SIZE = 13;
+    // 基础配置
     const CANVAS_SIZE = 520;
-    const PADDING = 30;
-    const GRID_SPACING = (CANVAS_SIZE - PADDING * 2) / (BOARD_SIZE - 1);
-    const STONE_RADIUS = GRID_SPACING * 0.45;
+    const NODE_RADIUS = 15;
+    const LINE_WIDTH = 6;
+    const HIT_RADIUS = 30;
 
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
 
     // 游戏状态
     let currentLevelIndex = 0;
-    let vertices = []; // 黑色棋子 {x, y, id}
-    let edgeStones = []; // 白色棋子 {x, y, edgeId, id}
-    let edges = []; // 逻辑边 {v1, v2, stones: [], id}
-    
-    let playerPath = []; // 存储点击过的棋子索引 (allStones 中的索引)
-    let visitedEdges = new Set(); // 存储已完成的逻辑边 ID
-    let visitedStones = new Set(); // 存储已访问的棋子索引
+    let nodes = []; // {x, y, id}
+    let edges = []; // {u, v, id, visited}
+    let playerPath = []; // 存储经过的节点
+    let visitedEdges = new Set(); // 存储已访问的边ID
     let isDragging = false;
-    let lastStoneIndex = -1;
-    let allStones = []; // 混合数组用于渲染和碰撞检测
+    let lastNodeIndex = -1;
 
-    // 关卡原始数据 (欧拉路径设计: 奇点数为 0 或 2)
-    const rawLevels = [
+    // 关卡设计 (欧拉路径理论: 奇点数为 0 或 2)
+    const levels = [
         {
-            // 等级 1: 信封形状 (经典的欧拉路径)
-            vertices: [
-                { x: 3, y: 3 }, { x: 9, y: 3 },
-                { x: 3, y: 9 }, { x: 9, y: 9 },
-                { x: 6, y: 6 }
+            // 等级 1: 三角形 (0个奇点)
+            nodes: [
+                { x: 260, y: 100 },
+                { x: 100, y: 400 },
+                { x: 420, y: 400 }
             ],
-            paths: [
-                [0, 1], [1, 4], [4, 0], // 三角形屋顶
-                [0, 2], [2, 3], [3, 1], [1, 0], // 正方形墙壁
-                [2, 4], [4, 3] // 内部交叉 (可选，这里设计为信封)
+            edges: [
+                [0, 1], [1, 2], [2, 0]
             ]
         },
         {
-            // 等级 2: 双三角形
-            vertices: [
-                { x: 2, y: 6 }, { x: 6, y: 2 }, { x: 10, y: 6 },
-                { x: 6, y: 10 }
+            // 等级 2: 正方形带一条对角线 (2个奇点: 0和3)
+            nodes: [
+                { x: 130, y: 130 },
+                { x: 390, y: 130 },
+                { x: 130, y: 390 },
+                { x: 390, y: 390 }
             ],
-            paths: [
-                [0, 1], [1, 2], [2, 0], // 左上三角
-                [0, 3], [3, 2], [2, 0]  // 右下三角 (共用底边)
+            edges: [
+                [0, 1], [1, 3], [3, 2], [2, 0], [0, 3]
             ]
         },
         {
-            // 等级 3: 蝴蝶结 (两个共顶点的三角形)
-            vertices: [
-                { x: 2, y: 3 }, { x: 2, y: 9 }, 
-                { x: 6, y: 6 }, 
-                { x: 10, y: 3 }, { x: 10, y: 9 }
+            // 等级 3: 房子形状 (2个奇点)
+            nodes: [
+                { x: 260, y: 60 },  // 房顶
+                { x: 130, y: 190 }, // 左上墙角
+                { x: 390, y: 190 }, // 右上墙角
+                { x: 130, y: 390 }, // 左下墙角
+                { x: 390, y: 390 }  // 右下墙角
             ],
-            paths: [
+            edges: [
+                [0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4], [1, 4], [2, 3]
+            ]
+        },
+        {
+            // 等级 4: 信封 (2个奇点)
+            nodes: [
+                { x: 130, y: 130 },
+                { x: 390, y: 130 },
+                { x: 130, y: 330 },
+                { x: 390, y: 330 },
+                { x: 260, y: 230 }
+            ],
+            edges: [
+                [0, 1], [0, 4], [1, 4], [0, 2], [1, 3], [2, 3], [2, 4], [3, 4]
+            ]
+        },
+        {
+            // 等级 5: 蝴蝶结/两个三角形 (0个奇点)
+            nodes: [
+                { x: 100, y: 150 },
+                { x: 100, y: 370 },
+                { x: 260, y: 260 },
+                { x: 420, y: 150 },
+                { x: 420, y: 370 }
+            ],
+            edges: [
                 [0, 1], [1, 2], [2, 0],
                 [2, 3], [3, 4], [4, 2]
-            ]
-        },
-        {
-            // 等级 4: 嵌套正方形 (8字形变体)
-            vertices: [
-                { x: 3, y: 3 }, { x: 9, y: 3 }, { x: 9, y: 9 }, { x: 3, y: 9 },
-                { x: 5, y: 5 }, { x: 7, y: 5 }, { x: 7, y: 7 }, { x: 5, y: 7 }
-            ],
-            paths: [
-                [0, 1], [1, 2], [2, 3], [3, 0], // 外框
-                [4, 5], [5, 6], [6, 7], [7, 4], // 内框
-                [0, 4] // 连接桥 (必须有2个奇点)
-            ]
-        },
-        {
-            // 等级 5: 复杂几何星
-            vertices: [
-                { x: 6, y: 1 }, { x: 2, y: 4 }, { x: 4, y: 10 }, 
-                { x: 8, y: 10 }, { x: 10, y: 4 }, { x: 6, y: 6 }
-            ],
-            paths: [
-                [0, 1], [1, 2], [2, 3], [3, 4], [4, 0], // 五边形外框
-                [0, 5], [1, 5], [2, 5], [3, 5], [4, 5]  // 全部连向中心
             ]
         }
     ];
 
     function initLevel() {
-        const raw = rawLevels[currentLevelIndex];
+        const levelData = levels[currentLevelIndex];
         levelNumEl.textContent = currentLevelIndex + 1;
         
-        allStones = [];
-        edges = [];
-        const stoneMap = new Map();
-
-        // 1. 处理顶点 (黑子)
-        vertices = raw.vertices.map((v, i) => {
-            const stone = { x: v.x, y: v.y, color: 'black', type: 'vertex', vertexId: i };
-            stoneMap.set(`${v.x},${v.y}`, allStones.length);
-            allStones.push(stone);
-            return stone;
-        });
-
-        // 2. 处理路径 (白子) 和逻辑边
-        raw.paths.forEach((p, edgeIdx) => {
-            const v1 = raw.vertices[p[0]];
-            const v2 = raw.vertices[p[1]];
-            const currentEdgeStones = [];
-
-            const dx = Math.sign(v2.x - v1.x);
-            const dy = Math.sign(v2.y - v1.y);
-            
-            let curX = v1.x + dx;
-            let curY = v1.y + dy;
-            
-            while (curX !== v2.x || curY !== v2.y) {
-                const stoneKey = `${curX},${curY}`;
-                let stoneIdx;
-                if (stoneMap.has(stoneKey)) {
-                    stoneIdx = stoneMap.get(stoneKey);
-                } else {
-                    const stone = { x: curX, y: curY, color: 'white', type: 'edge', edgeIds: new Set() };
-                    stoneIdx = allStones.length;
-                    stoneMap.set(stoneKey, stoneIdx);
-                    allStones.push(stone);
-                }
-                allStones[stoneIdx].edgeIds.add(edgeIdx);
-                currentEdgeStones.push(stoneIdx);
-                curX += dx;
-                curY += dy;
-            }
-
-            edges.push({
-                id: edgeIdx,
-                v1: p[0],
-                v2: p[1],
-                stoneIndices: currentEdgeStones
-            });
-        });
-
+        nodes = levelData.nodes.map((n, i) => ({ ...n, id: i }));
+        edges = levelData.edges.map((e, i) => ({ u: e[0], v: e[1], id: i }));
+        
         playerPath = [];
         visitedEdges.clear();
-        visitedStones.clear();
         isDragging = false;
-        lastStoneIndex = -1;
+        lastNodeIndex = -1;
         
-        // 计算奇点数并提示
-        const degrees = new Array(raw.vertices.length).fill(0);
-        raw.paths.forEach(p => { degrees[p[0]]++; degrees[p[1]]++; });
-        const oddNodes = degrees.filter(d => d % 2 !== 0).length;
-        
-        statusMsgEl.textContent = `必须从黑子开始！(本关奇点数: ${oddNodes})`;
+        statusMsgEl.textContent = "连接所有线条完成一笔画！";
         statusMsgEl.style.color = "#4a2b11";
         draw();
     }
 
     function draw() {
         ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-        drawBoard();
-        drawStones();
-        drawPlayerPath();
+        
+        // 绘制背景 (淡色纸质感)
+        ctx.fillStyle = "#f0e6d2";
+        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+        drawEdges();
+        drawNodes();
+        drawCurrentPath();
     }
 
-    function drawBoard() {
-        ctx.strokeStyle = '#4a2b11';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < BOARD_SIZE; i++) {
-            ctx.beginPath();
-            ctx.moveTo(PADDING, PADDING + i * GRID_SPACING);
-            ctx.lineTo(CANVAS_SIZE - PADDING, PADDING + i * GRID_SPACING);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(PADDING + i * GRID_SPACING, PADDING);
-            ctx.lineTo(PADDING + i * GRID_SPACING, CANVAS_SIZE - PADDING);
-            ctx.stroke();
-        }
-        const starPoints = [3, 6, 9];
-        ctx.fillStyle = '#4a2b11';
-        starPoints.forEach(ix => {
-            starPoints.forEach(iy => {
-                ctx.beginPath();
-                ctx.arc(PADDING + ix * GRID_SPACING, PADDING + iy * GRID_SPACING, 3, 0, Math.PI * 2);
-                ctx.fill();
-            });
-        });
-    }
-
-    function drawStones() {
-        allStones.forEach((stone, index) => {
-            const x = PADDING + stone.x * GRID_SPACING;
-            const y = PADDING + stone.y * GRID_SPACING;
-            const isVisited = visitedStones.has(index);
+    function drawEdges() {
+        edges.forEach(edge => {
+            const u = nodes[edge.u];
+            const v = nodes[edge.v];
+            const isVisited = visitedEdges.has(edge.id);
 
             ctx.beginPath();
-            ctx.arc(x + 2, y + 2, STONE_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(x, y, STONE_RADIUS, 0, Math.PI * 2);
-            const gradient = ctx.createRadialGradient(x - STONE_RADIUS/3, y - STONE_RADIUS/3, STONE_RADIUS/10, x, y, STONE_RADIUS);
-            if (stone.color === 'black') {
-                gradient.addColorStop(0, isVisited ? '#444' : '#666');
-                gradient.addColorStop(1, isVisited ? '#222' : '#000');
-            } else {
-                gradient.addColorStop(0, isVisited ? '#eee' : '#fff');
-                gradient.addColorStop(1, isVisited ? '#bbb' : '#ccc');
-            }
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
+            ctx.moveTo(u.x, u.y);
+            ctx.lineTo(v.x, v.y);
+            
             if (isVisited) {
-                ctx.beginPath();
-                ctx.arc(x, y, STONE_RADIUS * 0.4, 0, Math.PI * 2);
-                ctx.fillStyle = stone.color === 'black' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)';
-                ctx.fill();
+                ctx.strokeStyle = "#f44336";
+                ctx.lineWidth = LINE_WIDTH;
+                ctx.setLineDash([]);
+            } else {
+                ctx.strokeStyle = "rgba(74, 43, 17, 0.3)";
+                ctx.lineWidth = LINE_WIDTH - 2;
+                ctx.setLineDash([5, 5]);
             }
+            
+            ctx.stroke();
+        });
+        ctx.setLineDash([]);
+    }
 
-            if (index === lastStoneIndex) {
-                ctx.beginPath();
-                ctx.arc(x, y, STONE_RADIUS + 4, 0, Math.PI * 2);
-                ctx.strokeStyle = '#f44336';
+    function drawNodes() {
+        nodes.forEach((node, index) => {
+            const isLast = index === lastNodeIndex;
+            const isVisited = playerPath.includes(index);
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, NODE_RADIUS, 0, Math.PI * 2);
+            
+            if (isLast) {
+                ctx.fillStyle = "#f44336";
+                ctx.strokeStyle = "#fff";
                 ctx.lineWidth = 3;
+                ctx.fill();
                 ctx.stroke();
+            } else if (isVisited) {
+                ctx.fillStyle = "#8b4513";
+                ctx.fill();
+            } else {
+                ctx.fillStyle = "#4a2b11";
+                ctx.fill();
             }
         });
     }
 
-    function drawPlayerPath() {
+    function drawCurrentPath() {
         if (playerPath.length < 2) return;
-        ctx.strokeStyle = '#f44336';
-        ctx.lineWidth = 5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
+
         ctx.beginPath();
-        const startStone = allStones[playerPath[0]];
-        ctx.moveTo(PADDING + startStone.x * GRID_SPACING, PADDING + startStone.y * GRID_SPACING);
+        ctx.strokeStyle = "#f44336";
+        ctx.lineWidth = LINE_WIDTH;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        const startNode = nodes[playerPath[0]];
+        ctx.moveTo(startNode.x, startNode.y);
+
         for (let i = 1; i < playerPath.length; i++) {
-            const stone = allStones[playerPath[i]];
-            ctx.lineTo(PADDING + stone.x * GRID_SPACING, PADDING + stone.y * GRID_SPACING);
+            const node = nodes[playerPath[i]];
+            ctx.lineTo(node.x, node.y);
         }
         ctx.stroke();
     }
@@ -258,41 +197,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         let clientX, clientY;
-        if (e.touches) { clientX = e.touches[0].clientX; clientY = e.touches[0].clientY; }
-        else { clientX = e.clientX; clientY = e.clientY; }
-        return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
     }
 
-    function findStoneAt(pos) {
-        for (let i = 0; i < allStones.length; i++) {
-            const stone = allStones[i];
-            const nx = PADDING + stone.x * GRID_SPACING;
-            const ny = PADDING + stone.y * GRID_SPACING;
-            const dist = Math.hypot(pos.x - nx, pos.y - ny);
-            if (dist < STONE_RADIUS * 1.5) return i;
+    function findNodeAt(pos) {
+        for (let i = 0; i < nodes.length; i++) {
+            const node = nodes[i];
+            const dist = Math.hypot(pos.x - node.x, pos.y - node.y);
+            if (dist < HIT_RADIUS) return i;
         }
         return -1;
     }
 
     function handleInputStart(e) {
         const pos = getMousePos(e);
-        const stoneIndex = findStoneAt(pos);
+        const nodeIndex = findNodeAt(pos);
         
-        if (stoneIndex !== -1) {
-            const stone = allStones[stoneIndex];
-            if (stone.color !== 'black') {
-                statusMsgEl.textContent = "起点必须是黑色棋子！";
-                statusMsgEl.style.color = "#f44336";
-                return;
-            }
+        if (nodeIndex !== -1) {
             isDragging = true;
-            playerPath = [stoneIndex];
+            playerPath = [nodeIndex];
             visitedEdges.clear();
-            visitedStones.clear();
-            visitedStones.add(stoneIndex);
-            lastStoneIndex = stoneIndex;
-            statusMsgEl.textContent = "连接中...";
-            statusMsgEl.style.color = "#4a2b11";
+            lastNodeIndex = nodeIndex;
+            statusMsgEl.textContent = "正在绘图...";
             draw();
         }
     }
@@ -300,57 +236,34 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleInputMove(e) {
         if (!isDragging) return;
         const pos = getMousePos(e);
-        const stoneIndex = findStoneAt(pos);
+        const nodeIndex = findNodeAt(pos);
 
-        if (stoneIndex !== -1 && stoneIndex !== lastStoneIndex) {
-            const s1 = allStones[lastStoneIndex];
-            const s2 = allStones[stoneIndex];
-            const isAdjacent = (Math.abs(s1.x - s2.x) === 1 && s1.y === s2.y) || 
-                              (Math.abs(s1.y - s2.y) === 1 && s1.x === s2.x);
+        if (nodeIndex !== -1 && nodeIndex !== lastNodeIndex) {
+            // 查找是否存在连接 lastNodeIndex 和 nodeIndex 的边
+            const edgeIndex = edges.findIndex(edge => {
+                const match = (edge.u === lastNodeIndex && edge.v === nodeIndex) || 
+                              (edge.v === lastNodeIndex && edge.u === nodeIndex);
+                return match && !visitedEdges.has(edge.id);
+            });
 
-            if (isAdjacent) {
-                // 检查这条“子步”是否属于某个合法的逻辑边
-                const commonEdges = [...s1.edgeIds || []].filter(id => (s2.edgeIds && s2.edgeIds.has(id)) || (s2.type === 'vertex' && edges[id] && (edges[id].v1 === s2.vertexId || edges[id].v2 === s2.vertexId)));
-                // 如果是从顶点出发
-                let edgeId = -1;
-                if (s1.type === 'vertex') {
-                    edgeId = edges.findIndex(e => (e.v1 === s1.vertexId || e.v2 === s1.vertexId) && e.stoneIndices.includes(stoneIndex));
-                } else if (s2.type === 'vertex') {
-                    edgeId = edges.findIndex(e => (e.v1 === s2.vertexId || e.v2 === s2.vertexId) && e.stoneIndices.includes(lastStoneIndex));
-                } else {
-                    edgeId = [...s1.edgeIds].find(id => s2.edgeIds.has(id));
-                }
-
-                if (edgeId !== -1) {
-                    // 检查这条边是否已经走完过
-                    if (visitedEdges.has(edgeId)) {
-                        statusMsgEl.textContent = "每条路径只能走一次！";
-                        statusMsgEl.style.color = "#f44336";
-                        return;
-                    }
-
-                    // 允许在边内部移动，记录路径
-                    // 注意：这里不需要限制 visitedStones，因为欧拉路径允许重复经过顶点，
-                    // 但由于我们的设计是白色棋子只属于一条边，所以重复经过白色棋子意味着重复经过边。
-                    // 只有黑色棋子（顶点）可以重复经过。
-                    if (s2.type === 'edge' && visitedStones.has(stoneIndex)) {
-                        // 如果是回退
-                        if (playerPath.length >= 2 && stoneIndex === playerPath[playerPath.length - 2]) {
-                            playerPath.pop();
-                            visitedStones.delete(lastStoneIndex);
-                            lastStoneIndex = stoneIndex;
-                        }
-                    } else {
-                        playerPath.push(stoneIndex);
-                        visitedStones.add(stoneIndex);
-                        lastStoneIndex = stoneIndex;
-                        
-                        // 检查是否走完了一条完整的边
-                        if (s2.type === 'vertex') {
-                            visitedEdges.add(edgeId);
-                        }
-                        checkVictory();
-                    }
+            if (edgeIndex !== -1) {
+                visitedEdges.add(edges[edgeIndex].id);
+                playerPath.push(nodeIndex);
+                lastNodeIndex = nodeIndex;
+                checkVictory();
+                draw();
+            } else {
+                // 如果尝试经过已访问的边，或者不相邻，检查是否是回退
+                if (playerPath.length >= 2 && nodeIndex === playerPath[playerPath.length - 2]) {
+                    // 回退逻辑: 找到刚刚经过的那条边并移除
+                    const lastEdgeId = edges.find(edge => 
+                        (edge.u === playerPath[playerPath.length-1] && edge.v === playerPath[playerPath.length-2]) ||
+                        (edge.v === playerPath[playerPath.length-1] && edge.u === playerPath[playerPath.length-2])
+                    ).id;
+                    
+                    visitedEdges.delete(lastEdgeId);
+                    playerPath.pop();
+                    lastNodeIndex = nodeIndex;
                     draw();
                 }
             }
@@ -359,12 +272,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkVictory() {
         if (visitedEdges.size === edges.length) {
-            statusMsgEl.textContent = "完美！全部一笔画出！";
+            statusMsgEl.textContent = "完美！全部连接完成！";
             statusMsgEl.style.color = "#2e7d32";
             isDragging = false;
             setTimeout(() => {
-                if (currentLevelIndex < rawLevels.length - 1) modal.style.display = 'flex';
-                else { alert('恭喜！你已精通围棋一笔画！'); window.location.href = '../index.html'; }
+                if (currentLevelIndex < levels.length - 1) {
+                    modal.style.display = "flex";
+                } else {
+                    alert("恭喜！你已完成所有一笔画关卡！");
+                    window.location.href = "../index.html";
+                }
             }, 500);
         }
     }
@@ -372,12 +289,23 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.addEventListener('mousedown', handleInputStart);
     window.addEventListener('mousemove', handleInputMove);
     window.addEventListener('mouseup', () => isDragging = false);
-    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInputStart(e); }, { passive: false });
-    window.addEventListener('touchmove', (e) => handleInputMove(e));
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleInputStart(e);
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => {
+        handleInputMove(e);
+    });
     window.addEventListener('touchend', () => isDragging = false);
+
     resetBtn.addEventListener('click', initLevel);
     backBtn.addEventListener('click', () => window.location.href = '../index.html');
-    modalNextBtn.addEventListener('click', () => { modal.style.display = 'none'; currentLevelIndex++; initLevel(); });
+    modalNextBtn.addEventListener('click', () => {
+        modal.style.display = 'none';
+        currentLevelIndex++;
+        initLevel();
+    });
     modalHomeBtn.addEventListener('click', () => window.location.href = '../index.html');
 
     initLevel();
