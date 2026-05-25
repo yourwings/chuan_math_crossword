@@ -15,111 +15,131 @@ document.addEventListener('DOMContentLoaded', () => {
     const CANVAS_SIZE = 520;
     const PADDING = 30;
     const GRID_SPACING = (CANVAS_SIZE - PADDING * 2) / (BOARD_SIZE - 1);
-    const STONE_RADIUS = GRID_SPACING * 0.42;
+    const STONE_RADIUS = GRID_SPACING * 0.45;
 
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
 
     // 游戏状态
     let currentLevelIndex = 0;
-    let playerPath = []; // 存储点击过的节点索引 (按顺序)
-    let visitedNodes = new Set(); // 存储已访问的节点索引
+    let allStones = []; // 包含所有棋子的数组 {x, y, color, id}
+    let playerPath = []; // 存储点击过的棋子索引
+    let visitedNodes = new Set(); // 存储已访问的棋子索引
     let isDragging = false;
-    let lastNodeIndex = -1;
+    let lastStoneIndex = -1;
 
-    // 关卡数据 (哈密顿路径设计)
-    const levels = [
+    // 关卡原始数据
+    const rawLevels = [
         {
-            // 等级 1: 简单的 U 形
-            nodes: [
-                { x: 4, y: 4, color: 'black' },
-                { x: 4, y: 8, color: 'black' },
-                { x: 8, y: 8, color: 'black' },
-                { x: 8, y: 4, color: 'black' }
+            // 等级 1: 简单的 L 形
+            vertices: [
+                { x: 3, y: 3 }, // 顶点 1
+                { x: 3, y: 7 }, // 顶点 2
+                { x: 7, y: 7 }  // 顶点 3
             ],
-            edges: [[0, 1], [1, 2], [2, 3]]
-        },
-        {
-            // 等级 2: Z 字形
-            nodes: [
-                { x: 3, y: 3, color: 'white' },
-                { x: 9, y: 3, color: 'white' },
-                { x: 3, y: 9, color: 'black' },
-                { x: 9, y: 9, color: 'black' }
-            ],
-            edges: [[0, 1], [1, 2], [2, 3]]
-        },
-        {
-            // 等级 3: 蛇形路径
-            nodes: [
-                { x: 2, y: 2, color: 'black' }, { x: 6, y: 2, color: 'black' }, { x: 10, y: 2, color: 'black' },
-                { x: 10, y: 6, color: 'white' }, { x: 6, y: 6, color: 'white' }, { x: 2, y: 6, color: 'white' },
-                { x: 2, y: 10, color: 'black' }, { x: 6, y: 10, color: 'black' }, { x: 10, y: 10, color: 'black' }
-            ],
-            edges: [
-                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8]
+            paths: [
+                [0, 1], [1, 2] // 顶点之间的连线
             ]
         },
         {
-            // 等级 4: 螺旋
-            nodes: [
-                { x: 2, y: 2, color: 'black' }, { x: 10, y: 2, color: 'black' },
-                { x: 10, y: 10, color: 'black' }, { x: 2, y: 10, color: 'black' },
-                { x: 2, y: 6, color: 'white' }, { x: 6, y: 6, color: 'white' },
-                { x: 6, y: 4, color: 'white' }
+            // 等级 2: U 形
+            vertices: [
+                { x: 3, y: 3 }, { x: 3, y: 9 }, { x: 9, y: 9 }, { x: 9, y: 3 }
             ],
-            edges: [
-                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]
+            paths: [
+                [0, 1], [1, 2], [2, 3]
             ]
         },
         {
-            // 等级 5: 迷宫风格 (较难)
-            nodes: [
-                { x: 2, y: 2, color: 'black' }, { x: 4, y: 2, color: 'black' }, { x: 6, y: 2, color: 'black' },
-                { x: 6, y: 4, color: 'white' }, { x: 4, y: 4, color: 'white' }, { x: 2, y: 4, color: 'white' },
-                { x: 2, y: 6, color: 'black' }, { x: 4, y: 6, color: 'black' }, { x: 6, y: 6, color: 'black' },
-                { x: 8, y: 6, color: 'white' }, { x: 10, y: 6, color: 'white' },
-                { x: 10, y: 4, color: 'black' }, { x: 8, y: 4, color: 'black' },
-                { x: 8, y: 2, color: 'white' }, { x: 10, y: 2, color: 'white' }
+            // 等级 3: 阶梯形
+            vertices: [
+                { x: 2, y: 2 }, { x: 5, y: 2 }, { x: 5, y: 5 }, { x: 8, y: 5 }, { x: 8, y: 8 }, { x: 11, y: 8 }
             ],
-            edges: [
-                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8],
-                [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [13, 14]
+            paths: [
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5]
+            ]
+        },
+        {
+            // 等级 4: 螺旋回廊
+            vertices: [
+                { x: 1, y: 1 }, { x: 11, y: 1 }, { x: 11, y: 11 }, { x: 1, y: 11 },
+                { x: 1, y: 4 }, { x: 8, y: 4 }, { x: 8, y: 8 }, { x: 4, y: 8 }
+            ],
+            paths: [
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]
+            ]
+        },
+        {
+            // 等级 5: 迷宫挑战
+            vertices: [
+                { x: 2, y: 2 }, { x: 10, y: 2 }, { x: 10, y: 4 }, { x: 4, y: 4 },
+                { x: 4, y: 6 }, { x: 10, y: 6 }, { x: 10, y: 8 }, { x: 4, y: 8 },
+                { x: 4, y: 10 }, { x: 10, y: 10 }
+            ],
+            paths: [
+                [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9]
             ]
         }
     ];
 
-    function getLevel() {
-        return levels[currentLevelIndex];
-    }
-
     function initLevel() {
-        const level = getLevel();
+        const raw = rawLevels[currentLevelIndex];
         levelNumEl.textContent = currentLevelIndex + 1;
+        
+        // 展开所有棋子
+        allStones = [];
+        const stoneMap = new Map(); // 用于排重
+
+        function addStone(x, y, color) {
+            const key = `${x},${y}`;
+            if (!stoneMap.has(key)) {
+                const stone = { x, y, color, id: allStones.length };
+                allStones.push(stone);
+                stoneMap.set(key, stone.id);
+            }
+        }
+
+        // 1. 添加顶点 (黑子)
+        raw.vertices.forEach(v => addStone(v.x, v.y, 'black'));
+
+        // 2. 添加路径 (白子)
+        raw.paths.forEach(p => {
+            const v1 = raw.vertices[p[0]];
+            const v2 = raw.vertices[p[1]];
+            
+            const dx = Math.sign(v2.x - v1.x);
+            const dy = Math.sign(v2.y - v1.y);
+            
+            let curX = v1.x + dx;
+            let curY = v1.y + dy;
+            
+            while (curX !== v2.x || curY !== v2.y) {
+                addStone(curX, curY, 'white');
+                curX += dx;
+                curY += dy;
+            }
+        });
+
         playerPath = [];
         visitedNodes.clear();
         isDragging = false;
-        lastNodeIndex = -1;
-        statusMsgEl.textContent = "经过所有棋子各一次！";
+        lastStoneIndex = -1;
+        statusMsgEl.textContent = "黑子为顶点，白子为路径，请一笔走完！";
         statusMsgEl.style.color = "#4a2b11";
-        nextLevelBtn.style.display = 'none';
         draw();
     }
 
-    // 绘图逻辑
     function draw() {
         ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
         drawBoard();
-        drawEdges();
+        drawStones();
         drawPlayerPath();
-        drawNodes();
     }
 
     function drawBoard() {
         ctx.strokeStyle = '#4a2b11';
         ctx.lineWidth = 1;
 
-        // 画网格线
         for (let i = 0; i < BOARD_SIZE; i++) {
             ctx.beginPath();
             ctx.moveTo(PADDING, PADDING + i * GRID_SPACING);
@@ -143,11 +163,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function drawNodes() {
-        const level = getLevel();
-        level.nodes.forEach((node, index) => {
-            const x = PADDING + node.x * GRID_SPACING;
-            const y = PADDING + node.y * GRID_SPACING;
+    function drawStones() {
+        allStones.forEach((stone, index) => {
+            const x = PADDING + stone.x * GRID_SPACING;
+            const y = PADDING + stone.y * GRID_SPACING;
             const isVisited = visitedNodes.has(index);
 
             // 阴影
@@ -161,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.arc(x, y, STONE_RADIUS, 0, Math.PI * 2);
             
             const gradient = ctx.createRadialGradient(x - STONE_RADIUS/3, y - STONE_RADIUS/3, STONE_RADIUS/10, x, y, STONE_RADIUS);
-            if (node.color === 'black') {
+            if (stone.color === 'black') {
                 gradient.addColorStop(0, isVisited ? '#444' : '#666');
                 gradient.addColorStop(1, isVisited ? '#222' : '#000');
             } else {
@@ -172,16 +191,16 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = gradient;
             ctx.fill();
 
-            // 如果已访问，画一个完成标记
+            // 已访问标记
             if (isVisited) {
                 ctx.beginPath();
-                ctx.arc(x, y, STONE_RADIUS * 0.5, 0, Math.PI * 2);
-                ctx.fillStyle = node.color === 'black' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)';
+                ctx.arc(x, y, STONE_RADIUS * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = stone.color === 'black' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.2)';
                 ctx.fill();
             }
 
-            // 如果是当前路径的最后一个节点，加一个高亮圈
-            if (index === lastNodeIndex) {
+            // 当前焦点
+            if (index === lastStoneIndex) {
                 ctx.beginPath();
                 ctx.arc(x, y, STONE_RADIUS + 4, 0, Math.PI * 2);
                 ctx.strokeStyle = '#f44336';
@@ -191,45 +210,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function drawEdges() {
-        const level = getLevel();
-        ctx.setLineDash([5, 5]);
-        ctx.strokeStyle = 'rgba(74, 43, 17, 0.4)';
-        ctx.lineWidth = 3;
-
-        level.edges.forEach(edge => {
-            const n1 = level.nodes[edge[0]];
-            const n2 = level.nodes[edge[1]];
-            
-            ctx.beginPath();
-            ctx.moveTo(PADDING + n1.x * GRID_SPACING, PADDING + n1.y * GRID_SPACING);
-            ctx.lineTo(PADDING + n2.x * GRID_SPACING, PADDING + n2.y * GRID_SPACING);
-            ctx.stroke();
-        });
-        ctx.setLineDash([]);
-    }
-
     function drawPlayerPath() {
         if (playerPath.length < 2) return;
 
-        const level = getLevel();
         ctx.strokeStyle = '#f44336';
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 4;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
 
         ctx.beginPath();
-        const startNode = level.nodes[playerPath[0]];
-        ctx.moveTo(PADDING + startNode.x * GRID_SPACING, PADDING + startNode.y * GRID_SPACING);
+        const startStone = allStones[playerPath[0]];
+        ctx.moveTo(PADDING + startStone.x * GRID_SPACING, PADDING + startStone.y * GRID_SPACING);
 
         for (let i = 1; i < playerPath.length; i++) {
-            const node = level.nodes[playerPath[i]];
-            ctx.lineTo(PADDING + node.x * GRID_SPACING, PADDING + node.y * GRID_SPACING);
+            const stone = allStones[playerPath[i]];
+            ctx.lineTo(PADDING + stone.x * GRID_SPACING, PADDING + stone.y * GRID_SPACING);
         }
         ctx.stroke();
     }
 
-    // 交互逻辑
     function getMousePos(e) {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -250,12 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    function findNodeAt(pos) {
-        const level = getLevel();
-        for (let i = 0; i < level.nodes.length; i++) {
-            const node = level.nodes[i];
-            const nx = PADDING + node.x * GRID_SPACING;
-            const ny = PADDING + node.y * GRID_SPACING;
+    function findStoneAt(pos) {
+        for (let i = 0; i < allStones.length; i++) {
+            const stone = allStones[i];
+            const nx = PADDING + stone.x * GRID_SPACING;
+            const ny = PADDING + stone.y * GRID_SPACING;
             const dist = Math.hypot(pos.x - nx, pos.y - ny);
             if (dist < STONE_RADIUS * 1.5) {
                 return i;
@@ -266,14 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleInputStart(e) {
         const pos = getMousePos(e);
-        const nodeIndex = findNodeAt(pos);
+        const stoneIndex = findStoneAt(pos);
         
-        if (nodeIndex !== -1) {
+        if (stoneIndex !== -1) {
             isDragging = true;
-            playerPath = [nodeIndex];
+            playerPath = [stoneIndex];
             visitedNodes.clear();
-            visitedNodes.add(nodeIndex);
-            lastNodeIndex = nodeIndex;
+            visitedNodes.add(stoneIndex);
+            lastStoneIndex = stoneIndex;
             statusMsgEl.textContent = "开始连接...";
             statusMsgEl.style.color = "#4a2b11";
             draw();
@@ -284,35 +282,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isDragging) return;
         
         const pos = getMousePos(e);
-        const nodeIndex = findNodeAt(pos);
+        const stoneIndex = findStoneAt(pos);
 
-        if (nodeIndex !== -1 && nodeIndex !== lastNodeIndex) {
-            const level = getLevel();
+        if (stoneIndex !== -1 && stoneIndex !== lastStoneIndex) {
+            const s1 = allStones[lastStoneIndex];
+            const s2 = allStones[stoneIndex];
             
-            // 检查是否有边连接
-            const isValidEdge = level.edges.some(edge => {
-                return (edge[0] === lastNodeIndex && edge[1] === nodeIndex) || 
-                       (edge[1] === lastNodeIndex && edge[0] === nodeIndex);
-            });
+            // 检查是否相邻 (一格距离)
+            const isAdjacent = (Math.abs(s1.x - s2.x) === 1 && s1.y === s2.y) || 
+                              (Math.abs(s1.y - s2.y) === 1 && s1.x === s2.x);
 
-            if (isValidEdge) {
-                // 检查是否已经访问过
-                if (visitedNodes.has(nodeIndex)) {
-                    // 如果是回退到路径中的倒数第二个点，允许回退
-                    if (playerPath.length >= 2 && nodeIndex === playerPath[playerPath.length - 2]) {
+            if (isAdjacent) {
+                if (visitedNodes.has(stoneIndex)) {
+                    // 回退逻辑
+                    if (playerPath.length >= 2 && stoneIndex === playerPath[playerPath.length - 2]) {
                         const removed = playerPath.pop();
                         visitedNodes.delete(removed);
-                        lastNodeIndex = nodeIndex;
+                        lastStoneIndex = stoneIndex;
                         statusMsgEl.textContent = "已回退";
                     } else {
                         statusMsgEl.textContent = "每个棋子只能经过一次！";
                         statusMsgEl.style.color = "#f44336";
                     }
                 } else {
-                    playerPath.push(nodeIndex);
-                    visitedNodes.add(nodeIndex);
-                    lastNodeIndex = nodeIndex;
-                    statusMsgEl.textContent = "继续连接...";
+                    playerPath.push(stoneIndex);
+                    visitedNodes.add(stoneIndex);
+                    lastStoneIndex = stoneIndex;
+                    statusMsgEl.textContent = "连接中...";
                     statusMsgEl.style.color = "#4a2b11";
                     checkVictory();
                 }
@@ -326,14 +322,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkVictory() {
-        const level = getLevel();
-        if (visitedNodes.size === level.nodes.length) {
+        if (visitedNodes.size === allStones.length) {
             statusMsgEl.textContent = "恭喜过关！";
             statusMsgEl.style.color = "#2e7d32";
             isDragging = false;
             
             setTimeout(() => {
-                if (currentLevelIndex < levels.length - 1) {
+                if (currentLevelIndex < rawLevels.length - 1) {
                     modal.style.display = 'flex';
                 } else {
                     alert('太厉害了！你完成了所有关卡！');
@@ -358,20 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('touchend', handleInputEnd);
 
     resetBtn.addEventListener('click', initLevel);
-    
-    backBtn.addEventListener('click', () => {
-        window.location.href = '../index.html';
-    });
-
+    backBtn.addEventListener('click', () => window.location.href = '../index.html');
     modalNextBtn.addEventListener('click', () => {
         modal.style.display = 'none';
         currentLevelIndex++;
         initLevel();
     });
-
-    modalHomeBtn.addEventListener('click', () => {
-        window.location.href = '../index.html';
-    });
+    modalHomeBtn.addEventListener('click', () => window.location.href = '../index.html');
 
     initLevel();
 });
