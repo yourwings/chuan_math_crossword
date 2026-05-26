@@ -11,8 +11,14 @@
         <h1>围棋一笔画</h1>
         
         <div class="game-info">
-            <div class="level-info">关卡: <span id="level-num">1</span></div>
-            <div class="status-msg" id="status-msg">连接所有棋子完成一笔画！</div>
+            <div class="level-selector">
+                <label for="level-select">关卡:</label>
+                <select id="level-select">
+                    <!-- 动态生成关卡选项 -->
+                </select>
+            </div>
+            <button id="random-btn" class="mini-btn">随机</button>
+            <div class="status-msg" id="status-msg">连接所有线条完成一笔画！</div>
         </div>
 
         <div class="board-wrapper">

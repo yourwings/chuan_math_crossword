@@ -1,14 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
-    const levelNumEl = document.getElementById('level-num');
     const statusMsgEl = document.getElementById('status-msg');
     const resetBtn = document.getElementById('reset-btn');
-    const nextLevelBtn = document.getElementById('next-level-btn');
     const backBtn = document.getElementById('back-btn');
     const modal = document.getElementById('victory-modal');
     const modalNextBtn = document.getElementById('modal-next-btn');
     const modalHomeBtn = document.getElementById('modal-home-btn');
+    
+    // 新增 UI 元素引用
+    const levelSelect = document.getElementById('level-select');
+    const randomBtn = document.getElementById('random-btn');
 
     // 基础配置
     const CANVAS_SIZE = 520;
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             // 等级 3: 房子形状 (2个奇点)
             nodes: [
-                { x: 260, y: 60 },  // 房顶
+                { x: 260, y: 60 },  //房顶
                 { x: 130, y: 190 }, // 左上墙角
                 { x: 390, y: 190 }, // 右上墙角
                 { x: 130, y: 390 }, // 左下墙角
@@ -154,9 +156,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
+    // 初始化关卡选择器
+    function initLevelSelector() {
+        levelSelect.innerHTML = '';
+        levels.forEach((_, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = index + 1;
+            levelSelect.appendChild(option);
+        });
+        levelSelect.value = currentLevelIndex;
+    }
+
     function initLevel() {
         const levelData = levels[currentLevelIndex];
-        levelNumEl.textContent = currentLevelIndex + 1;
+        levelSelect.value = currentLevelIndex; // 更新选择器显示
         
         nodes = levelData.nodes.map((n, i) => ({ ...n, id: i }));
         edges = levelData.edges.map((e, i) => ({ u: e[0], v: e[1], id: i }));
@@ -360,6 +374,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     resetBtn.addEventListener('click', initLevel);
     backBtn.addEventListener('click', () => window.location.href = '../index.html');
+    
+    // 关卡选择监听
+    levelSelect.addEventListener('change', (e) => {
+        currentLevelIndex = parseInt(e.target.value);
+        initLevel();
+    });
+
+    // 随机关卡监听
+    randomBtn.addEventListener('click', () => {
+        let nextIndex;
+        do {
+            nextIndex = Math.floor(Math.random() * levels.length);
+        } while (nextIndex === currentLevelIndex && levels.length > 1);
+        currentLevelIndex = nextIndex;
+        initLevel();
+    });
+
     modalNextBtn.addEventListener('click', () => {
         modal.style.display = 'none';
         currentLevelIndex++;
@@ -367,5 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     modalHomeBtn.addEventListener('click', () => window.location.href = '../index.html');
 
+    initLevelSelector();
     initLevel();
 });
