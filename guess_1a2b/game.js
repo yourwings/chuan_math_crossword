@@ -9,14 +9,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const backBtn = document.getElementById('back-btn');
     const digitInputsContainer = document.getElementById('digit-inputs-container');
     const guessBtn = document.getElementById('guess-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const backspaceBtn = document.getElementById('backspace-btn');
+    const numBtns = document.querySelectorAll('.num-btn[data-value]');
     const gamePlayArea = document.getElementById('game-play');
     const messageEl = document.getElementById('message');
     const historyList = document.getElementById('history-list');
-    
     const modal = document.getElementById('game-over-modal');
     const modalMessage = document.getElementById('modal-message');
     const playAgainBtn = document.getElementById('play-again-btn');
     const returnHomeBtn = document.getElementById('return-home-btn');
+    
+    let currentInputIndex = 0;
 
     // 初始化游戏
     function initGame() {
@@ -24,8 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
         targetNumber = generateTargetNumber(digitCount);
         attempts = 0;
         isGameOver = false;
+        currentInputIndex = 0;
         
         createDigitInputs();
+        setupNumPad();
         
         messageEl.textContent = '';
         historyList.innerHTML = '';
@@ -38,34 +44,69 @@ document.addEventListener('DOMContentLoaded', () => {
     function createDigitInputs() {
         digitInputsContainer.innerHTML = '';
         for (let i = 0; i < digitCount; i++) {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.inputMode = 'numeric';
+            const input = document.createElement('div');
             input.className = 'digit-input';
-            input.maxLength = 1;
             input.dataset.index = i;
-            
-            // 自动跳到下一个输入框
-            input.addEventListener('input', (e) => {
-                const value = e.target.value;
-                if (value && i < digitCount - 1) {
-                    digitInputsContainer.children[i + 1].focus();
-                }
-            });
-
-            // 处理退格键回到上一个输入框
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !input.value && i > 0) {
-                    digitInputsContainer.children[i - 1].focus();
-                } else if (e.key === 'Enter') {
-                    handleGuess();
-                }
-            });
-
+            input.textContent = '';
             digitInputsContainer.appendChild(input);
         }
-        // 默认聚焦第一个
-        digitInputsContainer.firstChild.focus();
+        updateInputFocus();
+    }
+
+    function updateInputFocus() {
+        const inputs = digitInputsContainer.querySelectorAll('.digit-input');
+        inputs.forEach((input, i) => {
+            if (i === currentInputIndex) {
+                input.style.borderColor = '#4CAF50';
+                input.style.boxShadow = '0 0 8px rgba(76, 175, 80, 0.4)';
+            } else {
+                input.style.borderColor = '#2196F3';
+                input.style.boxShadow = 'none';
+            }
+        });
+    }
+
+    function setupNumPad() {
+        // 清除旧的监听器（如果有）
+        const newNumBtns = document.querySelectorAll('.num-btn[data-value]');
+        newNumBtns.forEach(btn => {
+            btn.onclick = () => {
+                if (isGameOver) return;
+                const value = btn.dataset.value;
+                handleNumInput(value);
+            };
+        });
+
+        clearBtn.onclick = () => {
+            if (isGameOver) return;
+            clearInputs();
+        };
+
+        backspaceBtn.onclick = () => {
+            if (isGameOver) return;
+            handleBackspace();
+        };
+    }
+
+    function handleNumInput(value) {
+        if (currentInputIndex < digitCount) {
+            const inputs = digitInputsContainer.querySelectorAll('.digit-input');
+            inputs[currentInputIndex].textContent = value;
+            currentInputIndex++;
+            if (currentInputIndex > digitCount - 1) {
+                // 已填满，但不自动提交，让用户确认
+            }
+            updateInputFocus();
+        }
+    }
+
+    function handleBackspace() {
+        if (currentInputIndex > 0) {
+            currentInputIndex--;
+            const inputs = digitInputsContainer.querySelectorAll('.digit-input');
+            inputs[currentInputIndex].textContent = '';
+            updateInputFocus();
+        }
     }
 
     // 生成不重复的随机数
@@ -84,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let guess = '';
         const inputs = digitInputsContainer.querySelectorAll('.digit-input');
         inputs.forEach(input => {
-            guess += input.value;
+            guess += input.textContent;
         });
         return guess;
     }
@@ -93,9 +134,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function clearInputs() {
         const inputs = digitInputsContainer.querySelectorAll('.digit-input');
         inputs.forEach(input => {
-            input.value = '';
+            input.textContent = '';
         });
-        inputs[0].focus();
+        currentInputIndex = 0;
+        updateInputFocus();
     }
 
     // 处理猜测
@@ -110,15 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        if (!/^\d+$/.test(guess)) {
-            showMessage('请输入有效的数字');
-            return;
-        }
-
         const guessDigits = guess.split('');
         const uniqueDigits = new Set(guessDigits);
         if (uniqueDigits.size !== digitCount) {
-            showMessage('数字不能重复');
+            showMessage('数字不能重复，请检查后提交');
             return;
         }
 
@@ -135,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         attempts++;
-        addHistoryItem(guess, `${aCount}A${bCount}B`);
+        addHistoryItem(attempts, guess, aCount, bCount);
         clearInputs();
         showMessage('');
 
@@ -144,12 +181,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addHistoryItem(guess, result) {
+    function addHistoryItem(index, guess, a, b) {
         const item = document.createElement('div');
         item.className = 'history-item';
         item.innerHTML = `
+            <span class="idx">#${index}</span>
             <span class="guess">${guess}</span>
-            <span class="result">${result}</span>
+            <span class="result">
+                <span class="a-part">${a}A</span><span class="b-part">${b}B</span>
+            </span>
         `;
         historyList.insertBefore(item, historyList.firstChild);
     }
@@ -161,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame(isWin) {
         isGameOver = true;
         if (isWin) {
-            modalMessage.textContent = `你用了 ${attempts} 次猜中了数字 ${targetNumber}！`;
+            modalMessage.textContent = `恭喜！你用了 ${attempts} 次猜中了数字 ${targetNumber}！`;
             modal.style.display = 'flex';
         }
     }
@@ -174,6 +214,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     guessBtn.addEventListener('click', handleGuess);
+
+    // 监听物理键盘
+    window.addEventListener('keydown', (e) => {
+        if (isGameOver) return;
+        if (e.key >= '0' && e.key <= '9') {
+            handleNumInput(e.key);
+        } else if (e.key === 'Backspace') {
+            handleBackspace();
+        } else if (e.key === 'Enter') {
+            handleGuess();
+        } else if (e.key === 'Escape') {
+            clearInputs();
+        }
+    });
 
     digitCountSelect.addEventListener('change', () => {
         // 如果游戏已经开始，询问是否重新开始

@@ -25,16 +25,44 @@
 
         <div id="game-play" class="game-play">
             <div class="input-section">
-                <h3>请输入你的猜测：</h3>
                 <div id="digit-inputs-container" class="digit-inputs-container">
                     <!-- 动态生成数字输入框 -->
                 </div>
+                
+                <div class="number-pad">
+                    <div class="pad-row">
+                        <button class="num-btn" data-value="1">1</button>
+                        <button class="num-btn" data-value="2">2</button>
+                        <button class="num-btn" data-value="3">3</button>
+                    </div>
+                    <div class="pad-row">
+                        <button class="num-btn" data-value="4">4</button>
+                        <button class="num-btn" data-value="5">5</button>
+                        <button class="num-btn" data-value="6">6</button>
+                    </div>
+                    <div class="pad-row">
+                        <button class="num-btn" data-value="7">7</button>
+                        <button class="num-btn" data-value="8">8</button>
+                        <button class="num-btn" data-value="9">9</button>
+                    </div>
+                    <div class="pad-row">
+                        <button class="num-btn action-btn" id="clear-btn">清空</button>
+                        <button class="num-btn" data-value="0">0</button>
+                        <button class="num-btn action-btn" id="backspace-btn">退格</button>
+                    </div>
+                </div>
+
                 <button id="guess-btn" class="guess-btn">提交猜测</button>
             </div>
             <div id="message" class="message"></div>
             
             <div class="history-container">
                 <h3>猜测历史</h3>
+                <div class="history-header">
+                    <span class="h-idx">次数</span>
+                    <span class="h-guess">猜测数字</span>
+                    <span class="h-result">结果 (A - 位置对, B - 数字对)</span>
+                </div>
                 <div id="history-list" class="history-list">
                     <!-- 猜测记录将在这里显示 -->
                 </div>
