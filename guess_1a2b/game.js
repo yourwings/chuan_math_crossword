@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         messageEl.textContent = '';
         historyList.innerHTML = '';
-        gamePlayArea.style.display = 'block';
+        // 不要直接设置 block，保留 CSS 中的 flex 布局
+        gamePlayArea.style.display = ''; 
         
         console.log('Target:', targetNumber); // 调试用
     }
