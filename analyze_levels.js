@@ -45,11 +45,47 @@ function analyzeLevel(level, index) {
     const oddNodes = degree.filter(d => d % 2 !== 0).length;
     const isEuler = oddNodes === 0 || oddNodes === 2;
 
+    // Check connectivity
+    let isConnected = true;
+    if (edges.length > 0) {
+        let adj = Array.from({length: nodes.length}, () => []);
+        let activeNodes = new Set();
+        edges.forEach(([u, v]) => {
+            adj[u].push(v);
+            adj[v].push(u);
+            activeNodes.add(u);
+            activeNodes.add(v);
+        });
+        
+        let startNode = Array.from(activeNodes)[0];
+        let visited = new Set();
+        let q = [startNode];
+        visited.add(startNode);
+        
+        while(q.length > 0) {
+            let curr = q.shift();
+            for(let nxt of adj[curr]) {
+                if(!visited.has(nxt)) {
+                    visited.add(nxt);
+                    q.push(nxt);
+                }
+            }
+        }
+        
+        for(let node of activeNodes) {
+            if(!visited.has(node)) {
+                isConnected = false;
+                break;
+            }
+        }
+    }
+
     return {
         index: index + 1,
         duplicateEdges,
         oddNodes,
         isEuler,
+        isConnected,
         nodeDegrees: degree
     };
 }
@@ -57,7 +93,7 @@ function analyzeLevel(level, index) {
 console.log("Analyzing levels...");
 const results = levels.map(analyzeLevel);
 
-const invalidLevels = results.filter(r => r.duplicateEdges.length > 0 || !r.isEuler);
+const invalidLevels = results.filter(r => r.duplicateEdges.length > 0 || !r.isEuler || !r.isConnected);
 
 if (invalidLevels.length === 0) {
     console.log("All levels are valid!");
@@ -70,6 +106,9 @@ if (invalidLevels.length === 0) {
         }
         if (!r.isEuler) {
             console.log(`  - Invalid Euler path: ${r.oddNodes} odd-degree nodes`);
+        }
+        if (!r.isConnected) {
+            console.log(`  - Disconnected graph`);
         }
         console.log("");
     });
