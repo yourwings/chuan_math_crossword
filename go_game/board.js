@@ -280,12 +280,12 @@ export function removeCapturedStones(board, lastMoveColor) {
     return capturedStones;
 }
 
-export function isValidMove(row, col, color, currentBoard, isSimulation = false, lastMove = null) {
+export function getMoveValidation(row, col, color, currentBoard, isSimulation = false, lastMove = null) {
     if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) {
-        return false; // Out of bounds
+        return { valid: false, reason: 'out_of_bounds' };
     }
     if (currentBoard[row][col] !== 'empty') {
-        return false; // Position already occupied
+        return { valid: false, reason: 'occupied' };
     }
 
     // Simulate the move
@@ -312,7 +312,7 @@ export function isValidMove(row, col, color, currentBoard, isSimulation = false,
             }
         }
         if (captures === 0) {
-            return false; // It's a suicide move and no captures are made
+            return { valid: false, reason: 'suicide' };
         }
     }
 
@@ -328,10 +328,15 @@ export function isValidMove(row, col, color, currentBoard, isSimulation = false,
         // return false;
     }
 
-    return true;
+    return { valid: true, reason: null };
 }
 
-export function drawBoard(board, ctx, canvas) {
+export function isValidMove(row, col, color, currentBoard, isSimulation = false, lastMove = null) {
+    return getMoveValidation(row, col, color, currentBoard, isSimulation, lastMove).valid;
+}
+
+export function drawBoard(board, ctx, canvas, options = {}) {
+    const { lastMove = null, hoverMove = null, hoverColor = 'black' } = options;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#D2B48C'; // Wood color
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -385,6 +390,35 @@ export function drawBoard(board, ctx, canvas) {
                 ctx.stroke();
             }
         }
+    }
+
+    if (lastMove &&
+        lastMove[0] >= 0 && lastMove[0] < BOARD_SIZE &&
+        lastMove[1] >= 0 && lastMove[1] < BOARD_SIZE &&
+        board[lastMove[0]][lastMove[1]] !== 'empty') {
+        const [row, col] = lastMove;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cellSize * (col + 1), cellSize * (row + 1), Math.max(3, cellSize / 8), 0, Math.PI * 2);
+        ctx.fillStyle = board[row][col] === 'black' ? '#f8e16c' : '#c0392b';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    if (hoverMove &&
+        hoverMove.row >= 0 && hoverMove.row < BOARD_SIZE &&
+        hoverMove.col >= 0 && hoverMove.col < BOARD_SIZE &&
+        board[hoverMove.row][hoverMove.col] === 'empty') {
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        ctx.beginPath();
+        ctx.arc(cellSize * (hoverMove.col + 1), cellSize * (hoverMove.row + 1), cellSize / 2 - 2, 0, 2 * Math.PI);
+        ctx.fillStyle = hoverColor === 'black' ? '#111111' : '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = hoverColor === 'black' ? '#f3d37a' : '#666666';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
     }
 }
 

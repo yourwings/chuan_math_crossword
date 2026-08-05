@@ -1,4 +1,4 @@
-import { getBoard, getCurrentPlayer, setBoard, setLastMove, setIsAiThinking, switchPlayer, getGameEnded, getGameStarted, getIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove, addDebugInfo, startTimer, stopTimer } from './gameLogic.js';
+import { getBoard, getCurrentPlayer, setIsAiThinking, placeStoneAndUpdate, getLastMove, getBoardSize, setPlayerCanMove, addDebugInfo, startTimer, stopTimer, registerPass } from './gameLogic.js';
 import { isValidMove, checkCapturesSimulation, removeCapturedStones } from './board.js';
 
 // 位置价值表 - 基于围棋理论的位置重要性
@@ -102,7 +102,7 @@ class MCTSNode {
     getValidMoves() {
         const moves = [];
         const BOARD_SIZE = getBoardSize();
-        const totalStones = this.board.flat().filter(cell => cell !== null).length;
+        const totalStones = this.board.flat().filter(cell => cell !== 'empty').length;
         
         // 开局阶段优先考虑定式
         if (totalStones < 8) {
@@ -177,7 +177,7 @@ class MCTSNode {
                 if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
                     if (this.board[nr][nc] === this.color) {
                         value += Math.max(0, 3 - Math.abs(dr) - Math.abs(dc)); // 靠近己方棋子
-                    } else if (this.board[nr][nc] !== null) {
+                    } else if (this.board[nr][nc] !== 'empty') {
                         value += Math.max(0, 2 - Math.abs(dr) - Math.abs(dc)); // 靠近对方棋子
                     }
                 }
@@ -196,8 +196,8 @@ class MCTSNode {
         testBoard[r][c] = this.color;
         
         const captures = checkCapturesSimulation(testBoard, this.color);
-        if (captures && captures.length > 0) {
-            value += captures.length * 10; // 提子价值很高
+        if (captures > 0) {
+            value += captures * 10; // 提子价值很高
         }
         
         // 检查是否能逃脱被提
@@ -391,8 +391,8 @@ class MCTSNode {
         const testBoard = board.map(row => [...row]);
         testBoard[move.r][move.c] = color;
         const captures = checkCapturesSimulation(testBoard, color);
-        if (captures && captures.length > 0) {
-            score += captures.length * 20; // 提子价值很高
+        if (captures > 0) {
+            score += captures * 20; // 提子价值很高
         }
         
         // 位置价值
@@ -443,7 +443,7 @@ class MCTSNode {
         
         for (let r = 0; r < BOARD_SIZE; r += step) {
             for (let c = 0; c < BOARD_SIZE; c += step) {
-                if (board[r][c] === null) {
+                if (board[r][c] === 'empty') {
                     // 简单的有效性检查，避免明显的自杀手
                     if (this.isReasonableMove(r, c, board, color)) {
                         moves.push({ r, c });
@@ -456,7 +456,7 @@ class MCTSNode {
         if (moves.length < 5 && step > 1) {
             for (let r = 0; r < BOARD_SIZE; r++) {
                 for (let c = 0; c < BOARD_SIZE; c++) {
-                    if (board[r][c] === null && this.isReasonableMove(r, c, board, color)) {
+                    if (board[r][c] === 'empty' && this.isReasonableMove(r, c, board, color)) {
                         moves.push({ r, c });
                     }
                 }
@@ -479,7 +479,7 @@ class MCTSNode {
                 if (dr === 0 && dc === 0) continue;
                 const nr = r + dr, nc = c + dc;
                 if (nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE) {
-                    if (board[nr][nc] === null) {
+                    if (board[nr][nc] === 'empty') {
                         hasLiberty = true;
                     } else if (board[nr][nc] === color) {
                         hasConnection = true;
@@ -764,7 +764,7 @@ export async function aiMove(ctx, canvas) {
                 player: aiColor,
                 reason: '无有效移动'
             });
-            console.log("AI passes");
+            registerPass(aiColor);
             // 停止AI思考计时器
             stopTimer();
             setIsAiThinking(false);

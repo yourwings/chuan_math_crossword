@@ -1,4 +1,4 @@
-import { removeCapturedStones, isValidMove, drawBoard, animateStonePlace, animateCapturedStones } from './board.js';
+import { isValidMove, animateStonePlace, animateCapturedStones } from './board.js';
 
 let BOARD_SIZE = 19; // 默认19x19棋盘
 
@@ -28,6 +28,8 @@ let currentTurnStartTime = null; // 当前回合开始时间
 let debugLog = []; // 调试日志
 let moveCounter = 0; // 落子计数器
 let moveHistory = []; // 落子历史记录
+let consecutivePasses = 0; // 连续停一手次数
+let lastAction = null; // 最近动作
 
 export function getBoard() {
     return board;
@@ -110,6 +112,14 @@ export function getMoveHistory() {
     return moveHistory;
 }
 
+export function getConsecutivePasses() {
+    return consecutivePasses;
+}
+
+export function getLastAction() {
+    return lastAction;
+}
+
 export function getDebugLog() {
     return debugLog;
 }
@@ -174,6 +184,9 @@ export function startGame() {
     resetTimer();
     startTimer();
     clearDebugLog(); // 清空调试日志
+    moveHistory = [];
+    consecutivePasses = 0;
+    lastAction = null;
     // drawBoard(board, ctx, canvas); // This will be handled by UI
     // updateStatus(); // This will be handled by UI
 }
@@ -183,6 +196,8 @@ export function resetGame() {
     stopTimer();
     // 清空落子历史
     moveHistory = [];
+    consecutivePasses = 0;
+    lastAction = null;
     // 重新开始游戏
     startGame();
 }
@@ -238,10 +253,19 @@ export async function placeStoneAndUpdate(row, col, color, ctx, canvas, callback
     moveHistory.push({
         moveNumber: moveCounter,
         player: color,
+        type: 'move',
         position: { row: row, col: col },
         capturedStones: capturedStones.length,
         timestamp: new Date().toISOString()
     });
+    consecutivePasses = 0;
+    lastAction = {
+        type: 'move',
+        player: color,
+        row,
+        col,
+        capturedStones: capturedStones.length
+    };
     
     // 记录debug信息
     addDebugInfo({
@@ -358,6 +382,30 @@ export function switchPlayer() {
     startTimer();
 }
 
+export function registerPass(player) {
+    moveCounter++;
+    consecutivePasses++;
+    lastAction = {
+        type: 'pass',
+        player
+    };
+
+    moveHistory.push({
+        moveNumber: moveCounter,
+        player,
+        type: 'pass',
+        position: null,
+        capturedStones: 0,
+        timestamp: new Date().toISOString()
+    });
+
+    addDebugInfo({
+        type: 'pass',
+        player,
+        consecutivePasses
+    });
+}
+
 export function getBlackCaptures() {
     return blackCaptures;
 }
@@ -367,36 +415,17 @@ export function getWhiteCaptures() {
 }
 
 export function checkGameEnd() {
-    // 计算已下棋子总数，判断游戏进度
-    let totalStones = 0;
-    for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            if (board[r][c] !== 'empty') {
-                totalStones++;
-            }
-        }
-    }
-    
-    // 只有在游戏进行到一定程度后才检查分差（至少下了30子）
-    if (totalStones >= 30) {
+    if (consecutivePasses >= 2) {
         const score = calculateScore();
-        const scoreDiff = Math.abs(score.black - score.white);
-        
-        // 根据棋盘大小调整分差阈值
-        const threshold = BOARD_SIZE >= 19 ? 100 : BOARD_SIZE >= 13 ? 60 : 40;
-        
-        if (scoreDiff > threshold) {
-            gameEnded = true;
-            return { ended: true, reason: 'large_score_difference', score: score };
-        }
+        gameEnded = true;
+        return { ended: true, reason: 'consecutive_passes', score };
     }
     
-    // 检查是否还有有效的落子位置
+    // 兜底：如果棋盘上已经不存在任何合法落点，则结束
     let hasValidMoves = false;
     for (let r = 0; r < BOARD_SIZE && !hasValidMoves; r++) {
         for (let c = 0; c < BOARD_SIZE && !hasValidMoves; c++) {
             if (board[r][c] === 'empty') {
-                // 检查黑棋和白棋是否都有有效落子
                 if (isValidMove(r, c, 'black', board, false, lastMove) || 
                     isValidMove(r, c, 'white', board, false, lastMove)) {
                     hasValidMoves = true;
@@ -406,8 +435,9 @@ export function checkGameEnd() {
     }
     
     if (!hasValidMoves) {
+        const score = calculateScore();
         gameEnded = true;
-        return { ended: true, reason: 'no_valid_moves', score: score };
+        return { ended: true, reason: 'no_valid_moves', score };
     }
     
     return { ended: false };

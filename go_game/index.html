@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +8,7 @@
 </head>
 <body>
     <h1>围棋游戏</h1>
+    <p class="page-subtitle">你执黑先行，对战 AI。支持停一手、实时计分、最近一步提示和更清晰的网页交互。</p>
      <div class="game-info">
          <div class="current-player-panel">
              <h3>当前状态</h3>
@@ -64,13 +65,6 @@
         <div id="debugContent"></div>
     </div>
     
-    <canvas id="goBoard" width="600" height="600"></canvas>
-    <div class="controls">
-        <button id="passButton">弃权</button>
-        <button id="resetButton">重置</button>
-        <button id="debugButton">调试信息</button>
-        <button id="homeButton">返回主页</button>
-    </div>
     <div class="board-size-selection">
         <label for="boardSize">选择棋盘大小:</label>
         <select id="boardSize">
@@ -86,6 +80,45 @@
             <option value="4">专家 (2000次模拟)</option>
         </select>
         <button id="startGameButton">开始游戏</button>
+    </div>
+
+    <div class="play-layout">
+        <div class="board-panel">
+            <canvas id="goBoard" width="600" height="600"></canvas>
+            <div class="controls">
+                <button id="passButton">停一手</button>
+                <button id="resetButton">重置</button>
+                <button id="debugButton">调试信息</button>
+                <button id="homeButton">返回主页</button>
+            </div>
+        </div>
+
+        <aside class="assistant-panel">
+            <div class="assistant-card">
+                <h3>对局提示</h3>
+                <div id="helperText" class="helper-text">点击“开始游戏”后落子。悬停棋盘可预览落点。</div>
+            </div>
+
+            <div class="assistant-card">
+                <h3>最近一步</h3>
+                <div id="lastMoveInfo" class="helper-text">暂无落子</div>
+            </div>
+
+            <div class="assistant-card">
+                <h3>停一手状态</h3>
+                <div id="passInfo" class="helper-text">连续停一手 2 次会结束对局并开始计分。</div>
+            </div>
+
+            <div class="assistant-card compact">
+                <h3>网页端操作</h3>
+                <ul class="tips-list">
+                    <li>鼠标悬停会显示当前可落点预览</li>
+                    <li>点击已有棋子会显示该子当前气数</li>
+                    <li>棋盘上的黄色/红色圆点表示最近一步</li>
+                    <li>“停一手”不是认输，双方连续停一手才结束</li>
+                </ul>
+            </div>
+        </aside>
     </div>
     
     <!-- 数子法说明 -->
